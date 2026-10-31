@@ -1,6 +1,7 @@
 import express from 'express'
 import fs from 'fs'
 import path from 'path'
+import { rememberPosition, recallPositions } from '../../memory/bridge.js'
 
 const router = express.Router()
 
@@ -210,13 +211,28 @@ router.get('/positions', async (req, res) => {
 })
 
 // POST /api/positions
-router.post('/positions', (req, res) => {
+router.post('/positions', async (req, res) => {
   const { marketId, question, side, entryPrice, source = 'LIVE' } = req.body
 
   if (!marketId || !question || !side || typeof entryPrice !== 'number') {
     return res.status(400).json({
       error: 'That position could not be saved. Required parameters were missing.'
     })
+  }
+
+  const openedAt = new Date().toISOString()
+
+  // Attempt to write to Walrus Memory
+  let walrusResult = { ok: false, reason: 'unattempted' }
+  try {
+    walrusResult = await rememberPosition({
+      question,
+      side,
+      entryPrice,
+      openedAt
+    })
+  } catch (err) {
+    walrusResult = { ok: false, reason: err.message }
   }
 
   const positions = loadPositions()
@@ -226,8 +242,9 @@ router.post('/positions', (req, res) => {
     question,
     side,
     entryPrice,
-    openedAt: new Date().toISOString(),
-    source
+    openedAt,
+    source,
+    onWalrus: Boolean(walrusResult && walrusResult.ok)
   }
 
   positions.unshift(newPos)
@@ -239,7 +256,20 @@ router.post('/positions', (req, res) => {
     })
   }
 
-  res.status(201).json({ position: newPos })
+  res.status(201).json({
+    position: newPos,
+    walrus: walrusResult
+  })
+})
+
+// GET /api/memory/status
+router.get('/memory/status', (req, res) => {
+  const prefix = process.env.MEMWAL_NAMESPACE_PREFIX || 'default'
+  const namespace = `${prefix}-reckon`
+  res.json({
+    namespace,
+    configured: Boolean(process.env.MEMWAL_ACCOUNT_ID && process.env.MEMWAL_PRIVATE_KEY)
+  })
 })
 
 export default router

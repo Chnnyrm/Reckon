@@ -12,6 +12,28 @@ import {
 import { Logo } from './components/Logo'
 
 export interface Market {
+  question: string
+  slug: string
+  conditionId: string
+  outcomes: string[]
+  outcomePrices: (number | null)[]
+  volume24hr: number
+  endDate: string
+  image: string
+}
+
+export interface Position {
+  id: string
+  marketId: string
+  question: string
+  side: string
+  entryPrice: number
+  currentPrice: number | null
+  changePct: number | null
+  openedAt: string
+  source: 'LIVE' | 'BACKFILLED'
+  onWalrus?: boolean
+}
 
 function Sparkline({ isUp }: { isUp: boolean | null }) {
   if (isUp === null) {
@@ -96,6 +118,16 @@ export default function App() {
   const [positionFormError, setPositionFormError] = useState<string | null>(null)
   const [positionSuccessMsg, setPositionSuccessMsg] = useState<string | null>(null)
   const [isSubmittingPosition, setIsSubmittingPosition] = useState(false)
+  const [memoryNamespace, setMemoryNamespace] = useState<string>('')
+
+  useEffect(() => {
+    fetch('/api/memory/status')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.namespace) setMemoryNamespace(d.namespace)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchMarkets = async (tab: 'all' | 'sports') => {
     setIsLoadingMarkets(true)
@@ -180,7 +212,11 @@ export default function App() {
         throw new Error(data.error || 'That position could not be saved. The record file is not writable. Try again.')
       }
 
-      setPositionSuccessMsg(`Position logged on ${selectedSide} at ${(currentOutcomePrice * 100).toFixed(1)}¢ on the public record.`)
+      if (data.walrus && !data.walrus.ok) {
+        setPositionSuccessMsg('Saved locally. Walrus Memory did not accept the write.')
+      } else {
+        setPositionSuccessMsg(`Position logged on ${selectedSide} at ${(currentOutcomePrice * 100).toFixed(1)}¢ on the public record.`)
+      }
       fetchPositions()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'That position could not be saved. The record file is not writable. Try again.'
@@ -559,6 +595,22 @@ export default function App() {
               </section>
             </div>
 
+            {/* Walrus Memory Panel */}
+            <section className="rounded-xl border border-secondary bg-secondary p-xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-md">
+              <div className="space-y-xxs">
+                <h3 className="title-4 text-primary">Walrus Memory</h3>
+                <p className="caption-2 text-secondary">
+                  Immutable semantic accountability storage synced via Walrus decentralized memory relayer.
+                </p>
+              </div>
+              <div className="flex items-center gap-xs">
+                <span className="caption-4 text-tertiary">Namespace:</span>
+                <span className="inline-flex items-center rounded border border-utility-brand-200 bg-utility-brand-50 px-sm py-xxs font-mono text-xs font-medium text-utility-brand-700">
+                  {memoryNamespace || 'default-reckon'}
+                </span>
+              </div>
+            </section>
+
             {/* Positions List: Table Recipe Structure */}
             <section className="overflow-hidden rounded-xl border border-secondary bg-primary shadow-xs divide-y divide-secondary">
               {isLoadingPositions ? (
@@ -594,6 +646,9 @@ export default function App() {
                           <div className="flex items-center gap-sm caption-5 text-quaternary">
                             <span className="inline-flex items-center rounded border border-utility-gray-200 bg-utility-gray-50 px-sm py-xxs font-mono text-[11px] text-utility-gray-700">
                               {pos.source}
+                            </span>
+                            <span className="inline-flex items-center rounded border border-utility-gray-200 bg-utility-gray-50 px-sm py-xxs font-mono text-[11px] text-utility-gray-700">
+                              {pos.onWalrus ? 'on Walrus' : 'local only'}
                             </span>
                             <span>•</span>
                             <span>Opened: {new Date(pos.openedAt).toLocaleDateString()}</span>
