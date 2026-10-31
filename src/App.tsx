@@ -120,6 +120,32 @@ export default function App() {
   const [isSubmittingPosition, setIsSubmittingPosition] = useState(false)
   const [memoryNamespace, setMemoryNamespace] = useState<string>('')
 
+  // Oracle verdict state
+  const [verdictLoading, setVerdictLoading] = useState(false)
+  const [verdictError, setVerdictError] = useState<string | null>(null)
+  const [verdictData, setVerdictData] = useState<any>(null)
+
+  const handleGetVerdict = async () => {
+    setVerdictLoading(true)
+    setVerdictError(null)
+    try {
+      const res = await fetch('/api/oracle/verdict')
+      const data = await res.json()
+      if (res.status === 402) {
+        setVerdictError(`Payment required: 0.01 USDC on Sui testnet to ${data.recipient || 'oracle'}. (HTTP 402)`)
+      } else if (!res.ok) {
+        setVerdictError(data.error || data.reason || `Request failed with status ${res.status}`)
+      } else {
+        setVerdictData(data.verdict)
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to reach oracle service'
+      setVerdictError(message)
+    } finally {
+      setVerdictLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetch('/api/memory/status')
       .then((r) => r.json())
@@ -177,6 +203,8 @@ export default function App() {
     setSelectedSide(m.outcomes[0] || 'Yes')
     setPositionFormError(null)
     setPositionSuccessMsg(null)
+    setVerdictError(null)
+    setVerdictData(null)
     setActiveScreen('detail')
   }
 
@@ -562,6 +590,47 @@ export default function App() {
                     {isSubmittingPosition ? 'Recording call...' : 'Take position'}
                   </button>
                 </div>
+              </div>
+
+              {/* x402 Oracle Verdict Section */}
+              <div className="border-t border-secondary pt-2xl space-y-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
+                  <div className="space-y-xxs">
+                    <h3 className="body-1 text-primary">Analyst Oracle Verdict</h3>
+                    <p className="caption-2 text-secondary">
+                      Access cryptographic on-chain consensus verdict via gasless x402 payment on Sui testnet.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleGetVerdict}
+                    disabled={verdictLoading}
+                    className="inline-flex items-center gap-sm rounded-lg bg-primary px-lg py-sm text-sm font-semibold text-secondary border border-primary shadow-xs hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-focus-ring active:scale-[0.98] shrink-0"
+                  >
+                    <span>{verdictLoading ? 'Querying...' : 'Get the verdict (0.01 USDC)'}</span>
+                  </button>
+                </div>
+
+                {verdictError && (
+                  <div className="flex items-start gap-md rounded-xl bg-utility-error-50 border border-utility-error-200 p-lg">
+                    <WarningCircle size={18} className="mt-xxs shrink-0 text-utility-error-600" />
+                    <p className="text-sm font-medium text-utility-error-700">{verdictError}</p>
+                  </div>
+                )}
+
+                {verdictData && (
+                  <div className="rounded-xl border border-secondary bg-secondary p-xl space-y-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="caption-3 uppercase text-secondary">Consensus Verdict</span>
+                      <span className="caption-4 text-tertiary">
+                        {new Date(verdictData.evaluatedAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="body-2 text-primary">{verdictData.analysis}</p>
+                    <div className="caption-4 text-tertiary pt-xs">
+                      Confidence: {(verdictData.confidence * 100).toFixed(0)}% • Status: {verdictData.status}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           </div>

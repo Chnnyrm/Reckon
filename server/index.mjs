@@ -15,6 +15,7 @@ import path from 'path'
 import tatumRoutes from './routes/tatum.mjs'
 import reckonRoutes from './routes/reckon.mjs'
 import verifyRoutes from './routes/verify.mjs'
+import oracleRoutes from './routes/oracle.mjs'
 import { credentialGuard } from './credential-guard.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -35,6 +36,7 @@ app.use(credentialGuard)
 app.use('/api/tatum', tatumRoutes)
 app.use('/api', reckonRoutes)
 app.use('/api', verifyRoutes)
+app.use('/api', oracleRoutes)
 
 const server = createHttpServer(app)
 
