@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Hero, Problem } from './Hero'
 import { Walkthrough } from './Walkthrough'
 import { BuildEvidence } from './BuildEvidence'
+import { WalrusSection } from './WalrusSection'
 import { JudgesFooter, JudgesHeader, ScrollProgress } from './Chrome'
 import './judges.css'
 
@@ -31,6 +32,7 @@ export default function JudgesPage() {
         <Problem />
         <Walkthrough />
         <BuildEvidence />
+        <WalrusSection />
       </main>
       <JudgesFooter />
     </div>
