@@ -147,8 +147,8 @@ export function VerifyStrip() {
         </div>
 
         <p className="mt-2xl max-w-3xl text-xs leading-5 text-tertiary">
-          If a repository link returns 404, the fork is still private; the parent repository is
-          public.
+          Both repositories are public. The parent carries the Tatum AI Builder history and is
+          the one to submit; the fork is the deployment target.
         </p>
       </Container>
     </section>
