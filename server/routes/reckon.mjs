@@ -18,6 +18,13 @@ const router = express.Router()
 const POSITIONS_FILE = '/tmp/reckon-positions.json'
 // How long a locally written position is still shown while its blob commits.
 const PENDING_WINDOW_MS = 15 * 60 * 1000
+// A recall that hangs must not hold the HTTP request open behind it. Each
+// relayer call already times out at 20s, but a cold recall also fetches
+// /config and may rebuild a stale SEAL session and retry, so the pathological
+// worst case is ~60s. Cap the wait well inside the function limit: past the
+// deadline the read degrades to the cache with memoryAvailable: false instead
+// of stalling the request.
+const RECALL_DEADLINE_MS = 15000
 // The startup recall, so a cold instance answers from Walrus rather than from
 // whatever /tmp happened to keep.
 let startupRecall = null
@@ -102,12 +109,27 @@ function parseRecalledPositions(memories) {
   return [...byId.values()].sort((a, b) => (b.openedAt || '').localeCompare(a.openedAt || ''))
 }
 
+// Resolve with `fallback` if `work` has not settled within `ms`. The work
+// itself is left to finish (or to hit its own network timeout); it is only
+// detached from this request, which is the point — the caller gets an answer.
+function withDeadline(work, ms, fallback) {
+  let timer
+  const deadline = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms)
+  })
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer))
+}
+
 // Rebuild the list from Walrus. The cached file is a fallback, never the
 // authority: when recall succeeds, whatever is not on Walrus and not a recent
 // local write is dropped, so deleted positions cannot live on in /tmp.
 async function loadPositions() {
   const cached = readCacheFile() ?? inMemoryPositions
-  const recall = await recallPositions()
+  const recall = await withDeadline(recallPositions(), RECALL_DEADLINE_MS, {
+    ok: false,
+    memories: [],
+    reason: 'recall_timeout'
+  })
 
   if (!recall.ok) {
     // Nothing can be confirmed to be on Walrus right now, so nothing is
