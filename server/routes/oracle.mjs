@@ -1,3 +1,4 @@
+import { verifyDigest } from '../lib/verify-digest.mjs'
 import express from 'express'
 import { Mppx, NodeListener } from 'mppx/server'
 import { InMemoryDigestStore, USDC_TESTNET, sui } from '@suimpp/mpp/server'
@@ -72,10 +73,7 @@ router.get('/oracle/verdict', async (req, res) => {
   if (digest) {
     // Verify digest if supplied
     try {
-      const verifyRes = await fetch(
-        `http://localhost:${process.env.PORT || 3000}/api/verify?digest=${digest}`
-      )
-      const verifyData = await verifyRes.json()
+      const verifyData = await verifyDigest(digest)
       if (verifyData.ok) {
         return res.json({
           verdict: {
