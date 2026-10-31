@@ -224,4 +224,15 @@
 
   --color-utility-success-700: #4ADE80;
   --color-utility-error-700: #F87171;
+
+  /* The brand family has more members than the solid fill. Selected cards, the
+     record badge and the focus ring all read from the tinted brand tokens, so
+     overriding only --color-bg-brand-solid left those purple. */
+  --color-border-brand: #FF7A1A;
+  --color-ring-focus-ring: #FF7A1A;
+  --color-ring-focus-ring-error: #F87171;
+  --color-utility-brand-50: #3A1F08;
+  --color-utility-brand-200: #7A3F12;
+  --color-utility-brand-600: #FFB877;
+  --color-utility-brand-700: #FFB877;
 }

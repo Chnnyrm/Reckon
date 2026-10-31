@@ -136,7 +136,10 @@ export default function App() {
       const res = await fetch('/api/oracle/verdict')
       const data = await res.json()
       if (res.status === 402) {
-        setVerdictError(`Payment required: 0.01 USDC on Sui testnet to ${data.recipient || 'oracle'}. (HTTP 402)`)
+        const to = typeof data.recipient === 'string' && data.recipient.length > 12
+          ? `${data.recipient.slice(0, 8)}...${data.recipient.slice(-4)}`
+          : (data.recipient || 'oracle')
+        setVerdictError(`Payment required: 0.01 USDC on Sui testnet to ${to}. (HTTP 402)`)
       } else if (!res.ok) {
         setVerdictError(data.error || data.reason || `Request failed with status ${res.status}`)
       } else {
@@ -619,7 +622,7 @@ export default function App() {
                 {verdictError && (
                   <div className="flex items-start gap-md rounded-xl bg-utility-error-50 border border-utility-error-200 p-lg">
                     <WarningCircle size={18} className="mt-xxs shrink-0 text-utility-error-600" />
-                    <p className="text-sm font-medium text-utility-error-700">{verdictError}</p>
+                    <p className="text-sm font-medium text-utility-error-700 break-words">{verdictError}</p>
                   </div>
                 )}
 
