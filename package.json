@@ -17,6 +17,7 @@
     "mppx": "^0.17.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.180.0",
     "undici": "^7.0.0",
     "viem": "^2.57.13",
     "vite": "5.4.21",
@@ -28,6 +29,7 @@
     "@types/express": "^4.17.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.180.0",
     "typescript": "^5.9.3"
   }
 }

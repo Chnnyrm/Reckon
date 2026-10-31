@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Hero, Problem } from './Hero'
+import { Walkthrough } from './Walkthrough'
 import { JudgesFooter, JudgesHeader, ScrollProgress } from './Chrome'
 import './judges.css'
 
@@ -27,6 +28,7 @@ export default function JudgesPage() {
       <main id="main">
         <Hero />
         <Problem />
+        <Walkthrough />
       </main>
       <JudgesFooter />
     </div>
