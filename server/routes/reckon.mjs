@@ -78,7 +78,13 @@ function readCacheFile() {
 function writeCacheFile(positions) {
   inMemoryPositions = positions
   try {
-    fs.writeFileSync(POSITIONS_FILE, JSON.stringify(positions, null, 2), 'utf-8')
+    // Write-then-rename. Vercel gives each function instance its own /tmp, but
+    // one Fluid instance can run several invocations at once; rename is atomic,
+    // so a concurrent reader sees either the old file or the new one, never a
+    // half-written JSON that readCacheFile would discard.
+    const tmp = `${POSITIONS_FILE}.${process.pid}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(positions, null, 2), 'utf-8')
+    fs.renameSync(tmp, POSITIONS_FILE)
     return true
   } catch (err) {
     // A read-only or full /tmp must not lose the write: memory still has it,
