@@ -1,0 +1,94 @@
+/* Judges page motion. Everything here has a static state under
+   prefers-reduced-motion: content is visible, nothing travels, nothing pulses. */
+
+.judges-root {
+  color-scheme: dark;
+}
+
+.judges-root section[id] {
+  scroll-margin-top: 5rem;
+}
+
+.judges-code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.judges-step {
+  animation: judges-step-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.judges-panel-in {
+  animation: judges-step-in 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.judges-track-dot {
+  animation: judges-travel 2400ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both;
+}
+
+.judges-track-dot-static {
+  top: 100%;
+  opacity: 1;
+}
+
+.judges-write-line {
+  transform-origin: top;
+  animation: judges-line 2400ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both;
+}
+
+.judges-pay-step {
+  animation: judges-step-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes judges-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes judges-travel {
+  from {
+    top: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes judges-line {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .judges-step,
+  .judges-panel-in,
+  .judges-track-dot,
+  .judges-write-line,
+  .judges-pay-step {
+    animation: none;
+  }
+
+  .judges-track-dot {
+    top: 100%;
+    opacity: 1;
+  }
+
+  .judges-write-line {
+    transform: none;
+  }
+}
