@@ -6,6 +6,7 @@ import { WalrusSection } from './WalrusSection'
 import { TatumSection } from './TatumSection'
 import { PaymentsSection } from './PaymentsSection'
 import { VerifyStrip } from './VerifyStrip'
+import { Limits } from './Limits'
 import { JudgesFooter, JudgesHeader, ScrollProgress } from './Chrome'
 import './judges.css'
 
@@ -39,6 +40,7 @@ export default function JudgesPage() {
         <TatumSection />
         <PaymentsSection />
         <VerifyStrip />
+        <Limits />
       </main>
       <JudgesFooter />
     </div>
