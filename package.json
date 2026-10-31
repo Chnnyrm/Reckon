@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node server/index.mjs",
     "build": "vite build",
-    "check:memory": "node scripts/check-memory-client.mjs"
+    "check:memory": "node scripts/check-memory-client.mjs",
+    "start": "NODE_ENV=production node server/index.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

@@ -311,7 +311,11 @@ export function isConfigured() {
 }
 
 export function memoryNamespace(suffix = 'reckon') {
-  return `${namespacePrefix()}-${suffix}`
+  // The prefix exists so several apps can share one Walrus Memory account.
+  // For this app the namespace is simply "reckon"; a prefix produces
+  // "<prefix>-reckon" so another app's rows never mix with these.
+  const prefix = process.env.MEMWAL_NAMESPACE_PREFIX?.trim()
+  return prefix ? `${prefix}-${suffix}` : suffix
 }
 
 export function memoryStatus() {

@@ -59,7 +59,21 @@ const vite = await createViteServer({
   },
   appType: 'spa',
 })
-app.use(vite.middlewares)
+if (process.env.NODE_ENV === 'production') {
+  // Serve the built SPA. Vite middleware is a development server and must not
+  // run in production, where it would serve source files instead of the build.
+  const { default: path } = await import('node:path')
+  const { default: fs } = await import('node:fs')
+  const distDir = path.resolve(process.cwd(), 'dist')
+  if (!fs.existsSync(path.join(distDir, 'index.html'))) {
+    console.error('[reckon] dist/index.html missing; run npm run build first')
+    process.exit(1)
+  }
+  app.use(express.static(distDir, { index: false }))
+  app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(distDir, 'index.html')))
+} else {
+  app.use(vite.middlewares)
+}
 
 const port = process.env.PORT ?? 3000
 server.listen(port, () => {
