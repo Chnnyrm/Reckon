@@ -4,6 +4,7 @@ import { Walkthrough } from './Walkthrough'
 import { BuildEvidence } from './BuildEvidence'
 import { WalrusSection } from './WalrusSection'
 import { TatumSection } from './TatumSection'
+import { PaymentsSection } from './PaymentsSection'
 import { JudgesFooter, JudgesHeader, ScrollProgress } from './Chrome'
 import './judges.css'
 
@@ -35,6 +36,7 @@ export default function JudgesPage() {
         <BuildEvidence />
         <WalrusSection />
         <TatumSection />
+        <PaymentsSection />
       </main>
       <JudgesFooter />
     </div>
