@@ -168,16 +168,32 @@ test('the route is isolated from the product app', () => {
 test('the narration is paced to fit each chapter', () => {
   const {
     CHAPTERS,
+    INTRO_LINE,
+    INTRO_MS,
+    INTRO_TITLE,
     TOTAL_SECONDS,
+    CHAPTER_STARTS,
     chapterDurationMs,
     beatTwoStartMs,
     speechEstimateMs,
     FIRST_LINE_AT,
+    timelineAt,
   } = filmModel
   assert.equal(CHAPTERS.length, 6)
-  assert.ok(TOTAL_SECONDS >= 165 && TOTAL_SECONDS <= 180, `runtime ${TOTAL_SECONDS}s is outside 165 to 180`)
+  assert.ok(TOTAL_SECONDS >= 180 && TOTAL_SECONDS <= 190, `runtime ${TOTAL_SECONDS}s is outside 180 to 190`)
 
-  let total = 0
+  assert.equal(INTRO_TITLE, 'A forecasting record you can audit')
+  const introWords = INTRO_LINE.trim().split(/\s+/).length
+  assert.ok(introWords >= 25 && introWords <= 32, `intro has ${introWords} words`)
+  assert.doesNotMatch(INTRO_LINE, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+  assert.ok(INTRO_MS >= 7000)
+  assert.ok(INTRO_MS >= speechEstimateMs(INTRO_LINE) + 500, 'the intro must fit its spoken line')
+  assert.equal(CHAPTER_STARTS[0], INTRO_MS)
+  assert.equal(timelineAt(0).intro, true)
+  assert.equal(timelineAt(INTRO_MS).intro, false)
+  assert.equal(timelineAt(INTRO_MS).index, 0)
+
+  let total = INTRO_MS
   for (const chapter of CHAPTERS) {
     assert.equal(chapter.lines.length, 2, `${chapter.id} needs two beats`)
 
@@ -275,7 +291,26 @@ test('the player is capped and the narration panel is beside it', () => {
   assert.match(film, /<aside/)
   assert.ok(film.indexOf('<aside') > film.indexOf('min-w-0 md:order-2'))
   assert.match(film, /min-h-11/)
-  assert.match(film, /min-h-\[30rem\]/)
+  assert.match(film, /h-\[30rem\]/)
+  assert.match(film, /grid-cols-7/)
+  assert.match(film, /Go to the intro/)
+})
+
+test('the captions mirror the narration and can be turned off', () => {
+  const film = sources['Film.tsx']
+
+  assert.match(film, /const \[captionsOn, setCaptionsOn\] = useState\(true\)/)
+  assert.match(film, /Turn captions off/)
+  assert.match(film, /Turn captions on/)
+  assert.match(film, /aria-label="Captions"/)
+  assert.match(film, /h-\[4\.5rem\]/)
+  assert.match(film, /text-\[10px\] leading-\[14px\]/)
+  assert.match(film, /captionText/)
+  assert.match(film, /frame\.intro\s*\?\s*INTRO_LINE/)
+  assert.match(film, /frame\.chapter\.coverTitle/)
+  assert.match(film, /frame\.chapter\.coverLine/)
+  assert.match(film, /frame\.chapter\.lines\[frame\.beat - 1\]/)
+  assert.doesNotMatch(film, /localStorage|sessionStorage|document\.cookie/)
 })
 
 test('the voiceover follows the browser speech brief', () => {

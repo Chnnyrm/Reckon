@@ -9,7 +9,8 @@ import {
   X402_CHALLENGE,
 } from './data'
 import { BrandImage, X402Wordmark } from './Brand'
-import { CHAPTERS, coverOpacityAt, easeOut, span, type Chapter } from './film'
+import { Logo } from '../components/Logo'
+import { CHAPTERS, INTRO_TITLE, coverOpacityAt, easeOut, span, type Chapter } from './film'
 
 export function CoverCard({
   chapter,
@@ -163,4 +164,18 @@ function staticValues(index: number): { label: string; value: string; className?
     { label: 'Commits by AI Builder', value: String(AI_COMMIT_COUNT) },
     { label: 'Authored as', value: AI_AUTHOR },
   ]
+}
+
+export function IntroCard() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 z-20 flex flex-col justify-center gap-lg bg-primary p-lg sm:p-2xl"
+    >
+      <Logo size={24} />
+      <p className="max-w-xl text-heading-xs font-semibold tracking-tight text-primary sm:text-heading-sm">
+        {INTRO_TITLE}
+      </p>
+    </div>
+  )
 }

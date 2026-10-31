@@ -55,7 +55,7 @@ export const CHAPTERS: Chapter[] = [
     caption: 'The write takes about 12 seconds to commit; recall is the source of truth.',
     lines: [
       'The header reads write job. The app card holds the sentence, and the store card shows the reckon namespace. A packet travels between them.',
-      'The sentence has reached Walrus Memory. The write job reads encrypting, the spinner turns, and the job status shows accepted. The blob is not on screen yet.',
+      'The sentence reached Walrus Memory. The write job reads encrypting, the spinner turns, and the job status shows accepted. The blob is not visible.',
     ],
     sceneMs: 26000,
   },
@@ -67,7 +67,7 @@ export const CHAPTERS: Chapter[] = [
     coverLine: 'Graded mark to market, not by hindsight.',
     caption: 'These markets have not resolved. This is movement, not win rate.',
     lines: [
-      'The record header counts three positions. Each row shows its entry price and a mark that counts up or down against the current price. The rows settle.',
+      'The record header counts three positions. Each row shows its entry price and a mark counting against the current price. The rows settle.',
       'Each row is marked against the current price: one moves up, one moves down, and the third holds close to its entry. The arrows show the move.',
     ],
     sceneMs: 23000,
@@ -80,8 +80,8 @@ export const CHAPTERS: Chapter[] = [
     coverLine: 'An agent pays 0.01 USDC on Sui.',
     caption: 'The endpoint is public, the payment is the credential, and one digest buys one call.',
     lines: [
-      'The agent, the Reckon endpoint, and Sui sit on screen. The agent has no account, so the request is answered with a payment challenge. The panel lists testnet, one cent.',
-      'The agent\'s balance drops by one cent, and a digest comes back from the payment. The endpoint checks that digest on chain. The digest panel shows the payment check.',
+      'The agent, the endpoint, and Sui sit on screen. The agent has no account, so the request gets a payment challenge. The panel lists testnet, one cent.',
+      'The agent\'s balance drops by a cent, and a digest comes back. The endpoint checks it on chain. The panel shows the payment check.',
     ],
     sceneMs: 31000,
   },
@@ -93,7 +93,7 @@ export const CHAPTERS: Chapter[] = [
     coverLine: 'One prompt produced the shell. We extended it by hand.',
     caption: 'The shell was generated. The Walrus and x402 integrations were built by hand.',
     lines: [
-      'Tatum AI Builder generated the shell. The generated lane connects the builder to Reckon, and the build details sit below. The builder card sits left, the app card right.',
+      'Tatum AI Builder generated the shell. The generated lane connects the builder to Reckon, and the build details sit below. Builder left, app right.',
       'The hand-written lane draws back toward the builder, and its panel lists the Walrus Memory client, the payment route, and the deployment config.',
     ],
     sceneMs: 26000,
@@ -111,6 +111,15 @@ export function speechEstimateMs(line: string): number {
   return Math.round((line.length / SPEECH_CHARS_PER_SECOND) * 1000)
 }
 
+// The intro is not a chapter and has no market scene. It holds a full-frame
+// card while one line explains what Reckon is and who it is for. The card is
+// longer than seven seconds because the line is 26 words: at 13 characters per
+// second it needs twelve seconds, and the intro must not cut the line short.
+export const INTRO_TITLE = 'A forecasting record you can audit'
+export const INTRO_LINE =
+  'Reckon is a public record of forecasting positions on prediction markets. It is for analysts and forecasters, and for the software agents that rely on them.'
+export const INTRO_MS = Math.max(7000, speechEstimateMs(INTRO_LINE) + 500)
+
 export function chapterDurationMs(chapter: Chapter): number {
   return COVER_MS + chapter.sceneMs + HOLD_MS
 }
@@ -120,7 +129,7 @@ export function beatTwoStartMs(chapter: Chapter): number {
 }
 
 export const CHAPTER_STARTS: number[] = (() => {
-  let at = 0
+  let at = INTRO_MS
   return CHAPTERS.map((chapter) => {
     const start = at
     at += chapterDurationMs(chapter)
@@ -128,10 +137,12 @@ export const CHAPTER_STARTS: number[] = (() => {
   })
 })()
 
-export const TOTAL_MS = CHAPTERS.reduce((sum, chapter) => sum + chapterDurationMs(chapter), 0)
+export const TOTAL_MS =
+  INTRO_MS + CHAPTERS.reduce((sum, chapter) => sum + chapterDurationMs(chapter), 0)
 export const TOTAL_SECONDS = Math.round(TOTAL_MS / 1000)
 
 export type TimelineFrame = {
+  intro: boolean
   index: number
   chapter: Chapter
   startMs: number
@@ -190,7 +201,23 @@ export function lerp(from: number, to: number, t: number): number {
 
 export function timelineAt(elapsedMs: number): TimelineFrame {
   const wrapped = ((elapsedMs % TOTAL_MS) + TOTAL_MS) % TOTAL_MS
-  let start = 0
+
+  if (wrapped < INTRO_MS) {
+    return {
+      intro: true,
+      index: -1,
+      chapter: CHAPTERS[0],
+      startMs: 0,
+      localMs: wrapped,
+      durationMs: INTRO_MS,
+      scene: 0,
+      fill: clamp01(wrapped / INTRO_MS),
+      cover: 0,
+      beat: 0,
+    }
+  }
+
+  let start = INTRO_MS
 
   for (let index = 0; index < CHAPTERS.length; index += 1) {
     const chapter = CHAPTERS[index]
@@ -201,6 +228,7 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
       const beat: 0 | 1 | 2 =
         local >= duration * SECOND_BEAT_AT ? 2 : local >= FIRST_LINE_AT ? 1 : 0
       return {
+        intro: false,
         index,
         chapter,
         startMs: start,
@@ -219,6 +247,7 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
 
   const last = CHAPTERS.length - 1
   return {
+    intro: false,
     index: last,
     chapter: CHAPTERS[last],
     startMs: start,
