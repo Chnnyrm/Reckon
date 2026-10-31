@@ -4,47 +4,99 @@
 // depends on the machine and a name in the UI would be a claim the page cannot
 // keep.
 //
-// Speech is best effort. If the browser has no speech synthesis, or no English
-// voice arrives before the timeout, the film plays silently and the panel keeps
-// the text. Nothing here can stop the clock.
+// Plain rate and pitch on purpose. Several engines stretch the waveform when
+// the rate is below 1, and the result is thin and full of artefacts. A voice
+// that is not a normal English voice is worse than no voice at all, so the
+// synthetic Linux and Android engines are rejected rather than used.
+//
+// Speech is best effort. If the browser has no speech synthesis, or no usable
+// English voice arrives before the timeout, the film plays silently and the
+// panel keeps the text. Nothing here can stop the clock.
 
-export const SPEECH_RATE = 0.92
-export const SPEECH_PITCH = 1.02
+export const SPEECH_RATE = 1.0
+export const SPEECH_PITCH = 1.0
 export const SPEECH_VOLUME = 1
 export const VOICE_TIMEOUT_MS = 1600
 
-// In preference order. A name match wins over a language match, so a machine
-// with an English female voice keeps it. The language fallbacks follow the
-// brief: British English first, then American, then any English voice.
-const PREFERRED_NAMES = [
-  'female',
-  'samantha',
-  'zira',
-  'aria',
-  'jenny',
-  'google uk english female',
+// Checked, case-insensitively, against both the voice name and its URI. These
+// are the engines that read as static, buzz or an oddly pitched monotone.
+export const REJECTED_VOICE_NAMES = [
+  'espeak',
+  'pico',
+  'compact',
+  'mbrola',
+  'festival',
+  'flite',
+  'robot',
 ]
 
-function isEnglish(voice: SpeechSynthesisVoice): boolean {
-  return voice.lang.toLowerCase().startsWith('en')
+// A non-local voice that presents itself as a network voice is another remote
+// synthesis service. The name has to carry one of these markers to be
+// rejected; a network-backed Google voice keeps its ordinary name and is
+// still allowed.
+export const NETWORK_VOICE_MARKERS = [
+  'network',
+  'online',
+  'remote',
+  'cloud',
+  'internet',
+]
+
+// In order. A name match is case-insensitive. Exact names win over names that
+// merely contain the preferred name, and the first usable match is taken.
+export const PREFERRED_VOICES = [
+  'Google US English',
+  'Google UK English Female',
+  'Samantha',
+  'Aria',
+  'Jenny',
+  'Zira',
+  'Google UK English Male',
+]
+
+function textFor(voice: SpeechSynthesisVoice): { name: string; uri: string } {
+  return {
+    name: typeof voice.name === 'string' ? voice.name : '',
+    uri: typeof voice.voiceURI === 'string' ? voice.voiceURI : '',
+  }
+}
+
+function matchesMarker(value: string, markers: string[]): boolean {
+  const text = value.toLowerCase()
+  return markers.some((marker) => text.includes(marker))
+}
+
+export function isRejectedVoice(voice: SpeechSynthesisVoice): boolean {
+  const { name, uri } = textFor(voice)
+  if (matchesMarker(name, REJECTED_VOICE_NAMES)) return true
+  if (matchesMarker(uri, REJECTED_VOICE_NAMES)) return true
+  if (!voice.localService && matchesMarker(name, NETWORK_VOICE_MARKERS)) return true
+  return false
+}
+
+export function isEnglishVoice(voice: SpeechSynthesisVoice): boolean {
+  return typeof voice.lang === 'string' && voice.lang.toLowerCase().startsWith('en')
+}
+
+export function isUsableVoice(voice: SpeechSynthesisVoice): boolean {
+  return isEnglishVoice(voice) && !isRejectedVoice(voice)
 }
 
 export function chooseVoice(
   voices: SpeechSynthesisVoice[]
 ): SpeechSynthesisVoice | null {
-  const english = voices.filter(isEnglish)
-  for (const name of PREFERRED_NAMES) {
-    const match = english.find((voice) => voice.name.toLowerCase().includes(name))
+  const usable = voices.filter(isUsableVoice)
+  if (usable.length === 0) return null
+
+  for (const preferred of PREFERRED_VOICES) {
+    const wanted = preferred.toLowerCase()
+    const exact = usable.find((voice) => voice.name.toLowerCase() === wanted)
+    if (exact) return exact
+    const match = usable.find((voice) => voice.name.toLowerCase().includes(wanted))
     if (match) return match
   }
 
-  const british = english.find((voice) => voice.lang.toLowerCase().startsWith('en-gb'))
-  if (british) return british
-
-  const american = english.find((voice) => voice.lang.toLowerCase().startsWith('en-us'))
-  if (american) return american
-
-  return english[0] ?? null
+  return usable[0]
 }
 
 function speechSynthesis(): SpeechSynthesis | null {
@@ -104,7 +156,12 @@ export class Narrator {
     if (!this.voice) {
       this.voice = chooseVoice(synth.getVoices())
     }
-    if (!this.voice) return false
+    // The engine is checked again here, so a rejected voice can never be used
+    // even if the list changed between ready() and this call.
+    if (!this.voice || !isUsableVoice(this.voice)) {
+      this.voice = null
+      return false
+    }
 
     let utterance: SpeechSynthesisUtterance
     try {

@@ -17,6 +17,7 @@ const sources = Object.fromEntries(
 )
 const all = Object.values(sources).join('\n')
 const filmModel = await import(pathToFileURL(join(judgesDir, 'film.ts')).href)
+const narrationModel = await import(pathToFileURL(join(judgesDir, 'narration.ts')).href)
 
 test('the verified facts are the ones in the page', () => {
   const facts = [
@@ -165,29 +166,73 @@ test('the route is isolated from the product app', () => {
 
 
 test('the narration is paced to fit each chapter', () => {
-  const { CHAPTERS, TOTAL_SECONDS, chapterDurationMs } = filmModel
+  const {
+    CHAPTERS,
+    TOTAL_SECONDS,
+    chapterDurationMs,
+    beatTwoStartMs,
+    speechEstimateMs,
+    FIRST_LINE_AT,
+  } = filmModel
   assert.equal(CHAPTERS.length, 6)
-  assert.ok(TOTAL_SECONDS >= 150 && TOTAL_SECONDS <= 170, `runtime ${TOTAL_SECONDS}s is outside 150 to 170`)
+  assert.ok(TOTAL_SECONDS >= 165 && TOTAL_SECONDS <= 180, `runtime ${TOTAL_SECONDS}s is outside 165 to 180`)
 
   let total = 0
   for (const chapter of CHAPTERS) {
-    const words = chapter.line.trim().split(/\s+/).length
-    assert.ok(words >= 40 && words <= 55, `${chapter.id} has ${words} spoken words`)
-    const sentences = (chapter.line.match(/[.!?](\s|$)/g) ?? []).length
-    assert.ok(sentences >= 2 && sentences <= 3, `${chapter.id} has ${sentences} sentences`)
+    assert.equal(chapter.lines.length, 2, `${chapter.id} needs two beats`)
 
-    // No identifier or long number is spoken. These belong in the visible
-    // text, where a reader can copy them.
-    assert.doesNotMatch(chapter.line, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+    for (const [index, line] of chapter.lines.entries()) {
+      const words = line.trim().split(/\s+/).length
+      assert.ok(
+        words >= 20 && words <= 30,
+        `${chapter.id} beat ${index + 1} has ${words} spoken words`
+      )
+      const sentences = (line.match(/[.!?](\s|$)/g) ?? []).length
+      assert.ok(
+        sentences >= 1 && sentences <= 3,
+        `${chapter.id} beat ${index + 1} has ${sentences} sentences`
+      )
 
-    const budget = (chapter.line.length / 13) * 1000 + 1500
+      // No identifier or long number is spoken. These belong in the visible
+      // text, where a reader can copy them.
+      assert.doesNotMatch(line, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+    }
+
+    const duration = chapterDurationMs(chapter)
+    const beatTwo = beatTwoStartMs(chapter)
     assert.ok(
-      chapterDurationMs(chapter) >= budget,
-      `${chapter.id} is shorter than its spoken line plus breathing room`
+      FIRST_LINE_AT + speechEstimateMs(chapter.lines[0]) + 500 <= beatTwo,
+      `${chapter.id} first line runs into the second beat`
     )
-    total += chapterDurationMs(chapter)
+    assert.ok(
+      beatTwo + speechEstimateMs(chapter.lines[1]) + 500 <= duration,
+      `${chapter.id} second line runs past the chapter`
+    )
+    total += duration
   }
   assert.equal(Math.round(total / 1000), TOTAL_SECONDS)
+})
+
+test('the cover holds for two and a half seconds', () => {
+  const {
+    CHAPTERS,
+    COVER_MS,
+    COVER_FADE_MS,
+    FIRST_LINE_AT,
+    HOLD_MS,
+    coverOpacityAt,
+    chapterDurationMs,
+  } = filmModel
+
+  assert.equal(COVER_MS, 2800)
+  assert.equal(COVER_FADE_MS, 350)
+  assert.equal(FIRST_LINE_AT, 2450)
+  assert.ok(coverOpacityAt(0) > 0.999)
+  assert.ok(coverOpacityAt(FIRST_LINE_AT) > 0.999, 'the cover is still opaque when the line starts')
+  const midFade = coverOpacityAt(FIRST_LINE_AT + COVER_FADE_MS / 2)
+  assert.ok(midFade < 1 && midFade > 0, 'the cover must be mid dissolve')
+  assert.ok(coverOpacityAt(COVER_MS) < 0.001, 'the cover must be gone when the scene starts')
+  assert.equal(chapterDurationMs(CHAPTERS[0]), COVER_MS + CHAPTERS[0].sceneMs + HOLD_MS)
 })
 
 test('the header and its chips are above the player and target real sections', () => {
@@ -237,19 +282,45 @@ test('the voiceover follows the browser speech brief', () => {
   const narration = sources['narration.ts']
   const film = sources['Film.tsx']
 
-  assert.match(narration, /SPEECH_RATE = 0\.92/)
-  assert.match(narration, /SPEECH_PITCH = 1\.02/)
+  assert.match(narration, /SPEECH_RATE = 1\.0/)
+  assert.match(narration, /SPEECH_PITCH = 1\.0/)
   assert.match(narration, /SPEECH_VOLUME = 1/)
   assert.match(narration, /voiceschanged/)
-  assert.match(narration, /VOICE_TIMEOUT_MS/)
-  for (const hint of ['female', 'samantha', 'zira', 'aria', 'jenny', 'google uk english female']) {
-    assert.ok(narration.includes(`'${hint}'`), `missing voice hint: ${hint}`)
+  assert.match(narration, /VOICE_TIMEOUT_MS = 1600/)
+  for (const name of [
+    'espeak',
+    'pico',
+    'compact',
+    'mbrola',
+    'festival',
+    'flite',
+    'robot',
+  ]) {
+    assert.ok(narration.includes(`'${name}'`), `missing rejected voice: ${name}`)
   }
-  assert.match(narration, /en-gb/)
-  assert.match(narration, /en-us/)
-  assert.match(narration, /startsWith\('en'\)/)
+  for (const name of [
+    'Google US English',
+    'Google UK English Female',
+    'Samantha',
+    'Aria',
+    'Jenny',
+    'Zira',
+    'Google UK English Male',
+  ]) {
+    assert.ok(narration.includes(`'${name}'`), `missing preferred voice: ${name}`)
+  }
+  assert.match(narration, /localService/)
+  assert.match(narration, /voiceURI/)
 
-  assert.match(film, /narrator\.speak\(CHAPTERS\[frame\.index\]\.line\)/)
+  const unavailable = 'Narration is not available on this device.'
+  assert.match(film, /NARRATION_UNAVAILABLE/)
+  assert.equal(all.split(unavailable).length - 1, 1, 'the unavailable line is defined once')
+  assert.ok((film.match(/NARRATION_UNAVAILABLE/g) ?? []).length >= 3, 'the line must render in the panel in both modes')
+
+  assert.match(film, /narrator\.speak\(spokenLine\)/)
+  assert.match(film, /frame\.beat === 2/)
+  assert.match(film, /frame\.chapter\.coverTitle/)
+  assert.match(film, /frame\.chapter\.coverLine/)
   assert.match(film, /narrator\.cancel\(\)/)
   assert.match(film, /const \[playing, setPlaying\] = useState\(false\)/)
   assert.match(film, /const \[started, setStarted\] = useState\(false\)/)
@@ -258,4 +329,54 @@ test('the voiceover follows the browser speech brief', () => {
   assert.match(film, /Sound off/)
   assert.match(film, /staticMode/)
   assert.match(film, /\{!reduced \?/)
+})
+
+test('the voice chooser rejects synthetic engines and keeps the order', () => {
+  const voice = (
+    name,
+    lang = 'en-US',
+    localService = true,
+    voiceURI = ''
+  ) => ({ name, lang, localService, voiceURI })
+
+  const { chooseVoice, isUsableVoice } = narrationModel
+
+  assert.equal(isUsableVoice(voice('eSpeak NG')), false)
+  assert.equal(isUsableVoice(voice('Pico TTS')), false)
+  assert.equal(isUsableVoice(voice('Samantha (Compact)')), false)
+  assert.equal(isUsableVoice(voice('Cloud English', 'en-US', false)), false)
+  assert.equal(isUsableVoice(voice('Network English', 'en-US', false)), false)
+  assert.equal(isUsableVoice(voice('English (America)', 'en-US', true, 'espeak')), false)
+  assert.equal(isUsableVoice(voice('Google US English', 'en-US', false)), true)
+  assert.equal(isUsableVoice(voice('Ting-Ting', 'zh-CN')), false)
+
+  assert.equal(chooseVoice([voice('eSpeak NG'), voice('Pico TTS')]), null)
+  assert.equal(chooseVoice([voice('Ting-Ting', 'zh-CN')]), null)
+
+  assert.equal(
+    chooseVoice([
+      voice('eSpeak NG'),
+      voice('Samantha'),
+      voice('Google US English'),
+    ]).name,
+    'Google US English'
+  )
+  assert.equal(
+    chooseVoice([
+      voice('Samantha'),
+      voice('Google UK English Female'),
+    ]).name,
+    'Google UK English Female'
+  )
+  assert.equal(
+    chooseVoice([
+      voice('Google UK English Male'),
+      voice('Microsoft Zira Desktop - English (United States)'),
+    ]).name,
+    'Microsoft Zira Desktop - English (United States)'
+  )
+  assert.equal(
+    chooseVoice([voice('Daniel', 'en-GB'), voice('Ting-Ting', 'zh-CN')]).name,
+    'Daniel'
+  )
 })

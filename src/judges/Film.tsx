@@ -28,6 +28,7 @@ const FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-reckon-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black'
 
 const PLAYER = 'mx-auto w-full max-w-[1100px] px-xl sm:px-2xl'
+const NARRATION_UNAVAILABLE = 'Narration is not available on this device.'
 
 export default function Film() {
   const reduced = useReducedMotion()
@@ -37,6 +38,7 @@ export default function Film() {
   const [started, setStarted] = useState(false)
   const [soundOn, setSoundOn] = useState(true)
   const [voiceReady, setVoiceReady] = useState(false)
+  const [voiceChecked, setVoiceChecked] = useState(false)
   const [speechEpoch, setSpeechEpoch] = useState(0)
   const [chaptersOpen, setChaptersOpen] = useState(false)
 
@@ -48,6 +50,7 @@ export default function Film() {
     narrator.ready().then((ok) => {
       if (!live) return
       setVoiceReady(ok)
+      setVoiceChecked(true)
       if (!ok) setSoundOn(false)
     })
     return () => {
@@ -56,14 +59,21 @@ export default function Film() {
     }
   }, [])
 
+  const spokenLine =
+    frame.beat === 2
+      ? frame.chapter.lines[1]
+      : frame.beat === 1
+        ? frame.chapter.lines[0]
+        : null
+
   useEffect(() => {
-    if (started && playing && soundOn && voiceReady) {
-      narrator.speak(CHAPTERS[frame.index].line)
+    if (started && playing && soundOn && voiceReady && spokenLine) {
+      narrator.speak(spokenLine)
     } else {
       narrator.cancel()
     }
     return () => narrator.cancel()
-  }, [started, playing, soundOn, voiceReady, frame.index, speechEpoch])
+  }, [started, playing, soundOn, voiceReady, spokenLine, speechEpoch])
 
   useEffect(() => {
     if (!playing) return
@@ -89,6 +99,7 @@ export default function Film() {
     if (withSound) {
       narrator.ready().then((ok) => {
         setVoiceReady(ok)
+        setVoiceChecked(true)
         if (!ok) setSoundOn(false)
       })
     }
@@ -187,7 +198,7 @@ export default function Film() {
                     index={frame.index}
                     localMs={frame.localMs}
                     staticMode={staticMode}
-                    held={!playing}
+                    held={!playing && frame.beat === 0}
                   />
 
                   {!started ? (
@@ -361,7 +372,7 @@ export default function Film() {
                               {chapter.name}
                             </span>
                             <span className="block font-mono text-xs text-quaternary">
-                              {formatClock(chapterDurationMs(chapter) / 1000)}
+                              {(chapterDurationMs(chapter) / 1000).toFixed(1)}s
                             </span>
                           </span>
                           {index === frame.index ? (
@@ -372,8 +383,8 @@ export default function Film() {
                     ))}
                   </ol>
                   <p className="mt-sm text-xs text-quaternary">
-                    Covers hold 1.2 seconds, final frames hold 0.8 seconds. Total runtime{' '}
-                    {formatClock(TOTAL_SECONDS)}.
+                    Covers hold 2.45 seconds, then dissolve over 0.35 seconds. Final frames hold
+                    0.8 seconds. Total runtime {formatClock(TOTAL_SECONDS)}.
                   </p>
                 </div>
               ) : null}
@@ -403,6 +414,11 @@ export default function Film() {
                 <p className="mt-xs text-xs leading-5 text-quaternary">
                   Reduced motion is on. The first frame is held and the narration is below.
                 </p>
+                {voiceChecked && !voiceReady ? (
+                  <p className="mt-xs text-xs leading-5 text-quaternary">
+                    {NARRATION_UNAVAILABLE}
+                  </p>
+                ) : null}
                 <ol className="mt-xl space-y-xl">
                   {CHAPTERS.map((chapter, index) => (
                     <li key={chapter.id}>
@@ -411,20 +427,51 @@ export default function Film() {
                         {String(CHAPTERS.length).padStart(2, '0')}
                       </p>
                       <p className="mt-xs text-sm font-semibold text-primary">{chapter.name}</p>
-                      <p className="mt-xs text-sm leading-6 text-secondary">{chapter.line}</p>
+                      {chapter.lines.map((line, lineIndex) => (
+                        <p
+                          key={lineIndex}
+                          className="mt-xs text-sm leading-6 text-secondary"
+                        >
+                          {line}
+                        </p>
+                      ))}
                     </li>
                   ))}
                 </ol>
               </div>
             ) : (
               <div
-                key={frame.index}
-                className="narration-line"
+                className="mt-xl"
                 aria-live={soundOn && voiceReady ? 'off' : 'polite'}
-                aria-atomic="true"
               >
-                <h2 className="mt-xl text-lg font-semibold text-primary">{frame.chapter.name}</h2>
-                <p className="mt-md text-md leading-7 text-secondary">{frame.chapter.line}</p>
+                {frame.beat === 0 ? (
+                  <div key={`cover-${frame.index}`} className="narration-line">
+                    <h2 className="text-lg font-semibold text-primary">
+                      {frame.chapter.coverTitle}
+                    </h2>
+                    <p className="mt-md text-md leading-7 text-secondary">
+                      {frame.chapter.coverLine}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-lg font-semibold text-primary">{frame.chapter.name}</h2>
+                    <p
+                      key={`one-${frame.index}`}
+                      className="narration-line mt-md text-md leading-7 text-secondary"
+                    >
+                      {frame.chapter.lines[0]}
+                    </p>
+                    {frame.beat === 2 ? (
+                      <p
+                        key={`two-${frame.index}`}
+                        className="narration-line mt-sm text-md leading-7 text-secondary"
+                      >
+                        {frame.chapter.lines[1]}
+                      </p>
+                    ) : null}
+                  </>
+                )}
               </div>
             )}
 
@@ -437,15 +484,19 @@ export default function Film() {
                   />
                 </div>
                 <p className="mt-md text-xs leading-5 text-quaternary">
-                  {!started
-                    ? 'Press play to start the film and the narration.'
-                    : !soundOn
-                      ? 'Sound off. The full narration for this chapter stays on screen.'
-                      : !voiceReady
-                        ? 'Playing silently. The full narration for this chapter stays on screen.'
-                        : playing
-                          ? 'The narration follows the chapter clock.'
-                          : 'Paused on this chapter. Press play to continue.'}
+                  {voiceChecked && !voiceReady
+                    ? NARRATION_UNAVAILABLE
+                    : !started
+                      ? 'Press play to start the film and the narration.'
+                      : !soundOn
+                        ? 'Sound off. The full narration for this chapter stays on screen.'
+                        : !voiceReady
+                          ? 'Playing silently. The full narration for this chapter stays on screen.'
+                          : playing && frame.beat === 0
+                            ? 'The cover holds, then the first line begins.'
+                            : playing
+                              ? 'The narration follows the chapter clock.'
+                              : 'Paused on this chapter. Press play to continue.'}
                 </p>
                 <ol className="mt-lg grid grid-cols-6 gap-xs" aria-label="Chapter progress">
                   {CHAPTERS.map((chapter, index) => (
