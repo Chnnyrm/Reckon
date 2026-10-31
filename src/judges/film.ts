@@ -28,7 +28,7 @@ export const CHAPTERS: Chapter[] = [
     coverLine: 'Live prediction markets, real prices.',
     caption: "Markets come from Polymarket's public API with live prices.",
     lines: [
-      'Reckon is a forecast record for prediction markets, built for forecasters, analysts, and agents that rely on it. The card shows two prices.',
+      'The market card opens with a question about the halftime show. Two price tiles follow: one for yes, one for no, both still counting.',
       'The two prices count toward six and ninety-four cents. The volume climbs, and the app places no order. The feed stays open.',
     ],
     sceneMs: 22000,
