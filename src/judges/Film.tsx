@@ -200,11 +200,12 @@ export default function Film() {
                       />
                     </span>
                     <span
-                      className={`mt-xs block truncate text-left text-xs leading-4 ${
+                      className={`mt-xs block text-left text-xs leading-4 ${
                         index === frame.index ? 'text-primary' : 'text-quaternary'
                       }`}
                     >
-                      {chapter.segment}
+                      <span className="block truncate sm:hidden">{chapter.segment}</span>
+                      <span className="hidden sm:block">{chapter.name}</span>
                     </span>
                   </button>
                 )
