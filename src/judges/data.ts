@@ -9,8 +9,13 @@
 
 export const CAPTURE_DATE = '31 October 2026'
 export const LIVE_APP = 'https://reckon-three-beta.vercel.app'
-export const REPO_DEPLOYED = 'https://github.com/Chnnyrm/Reckon'
-export const REPO_MIRROR = 'https://github.com/Ksschkw/Reckon'
+// The parent repository is public and carries the commit history. The fork is
+// the deployment remote and may still be private; only the fork's link is
+// caveated.
+export const REPO_PUBLIC = 'https://github.com/Ksschkw/Reckon'
+export const REPO_FORK = 'https://github.com/Chnnyrm/Reckon'
+export const REPO_DEPLOYED = REPO_FORK
+export const REPO_MIRROR = REPO_PUBLIC
 
 export const TATUM_ID = '6addae51f9f9306c432153f9'
 export const MEMORY_NAMESPACE = 'reckon'
@@ -23,16 +28,16 @@ export const LINKS = {
   live: LIVE_APP,
   repoDeployed: REPO_DEPLOYED,
   repoMirror: REPO_MIRROR,
-  commits: `${REPO_DEPLOYED}/commits/main`,
-  deployNotes: `${REPO_DEPLOYED}/blob/main/DEPLOY.md`,
-  readme: `${REPO_DEPLOYED}/blob/main/README.md`,
-  verifySource: `${REPO_DEPLOYED}/blob/main/server/lib/verify-digest.mjs`,
-  oracleSource: `${REPO_DEPLOYED}/blob/main/server/routes/oracle.mjs`,
-  tatumSource: `${REPO_DEPLOYED}/blob/main/server/routes/tatum.mjs`,
-  tatumClientSource: `${REPO_DEPLOYED}/blob/main/server/tatum-client.mjs`,
-  bridgeSource: `${REPO_DEPLOYED}/blob/main/memory/bridge.js`,
-  positionsSource: `${REPO_DEPLOYED}/blob/main/server/routes/reckon.mjs`,
-  cacheCommit: `${REPO_DEPLOYED}/commit/a983a74`,
+  commits: `${REPO_PUBLIC}/commits/main`,
+  deployNotes: `${REPO_PUBLIC}/blob/main/DEPLOY.md`,
+  readme: `${REPO_PUBLIC}/blob/main/README.md`,
+  verifySource: `${REPO_PUBLIC}/blob/main/server/lib/verify-digest.mjs`,
+  oracleSource: `${REPO_PUBLIC}/blob/main/server/routes/oracle.mjs`,
+  tatumSource: `${REPO_PUBLIC}/blob/main/server/routes/tatum.mjs`,
+  tatumClientSource: `${REPO_PUBLIC}/blob/main/server/tatum-client.mjs`,
+  bridgeSource: `${REPO_PUBLIC}/blob/main/memory/bridge.js`,
+  positionsSource: `${REPO_PUBLIC}/blob/main/server/routes/reckon.mjs`,
+  cacheCommit: `${REPO_PUBLIC}/commit/a983a74`,
   blob: `https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${BLOB_ID}`,
   blobExplorer: `https://walruscan.com/mainnet/blob/${BLOB_ID}`,
   accountExplorer: `https://suiscan.xyz/mainnet/object/${MEMORY_ACCOUNT}`,
@@ -116,19 +121,19 @@ export const AI_COMMITS = [
     sha: '47099ac',
     title: 'scaffold',
     date: '31 Oct 2026',
-    href: `${REPO_DEPLOYED}/commit/47099ac`,
+    href: `${REPO_PUBLIC}/commit/47099ac`,
   },
   {
     sha: '4a8b7af',
     title: 'feat: write every position to Walrus Memory',
     date: '31 Oct 2026',
-    href: `${REPO_DEPLOYED}/commit/4a8b7af`,
+    href: `${REPO_PUBLIC}/commit/4a8b7af`,
   },
   {
     sha: '309c250',
     title: 'feat: 402 payment route on Sui testnet',
     date: '31 Oct 2026',
-    href: `${REPO_DEPLOYED}/commit/309c250`,
+    href: `${REPO_PUBLIC}/commit/309c250`,
   },
 ] as const
 
@@ -207,10 +212,10 @@ export const EVIDENCE: Evidence[] = [
     linkLabel: 'Read the mppx SDK',
   },
   {
-    claim: 'The source is in two repositories',
-    value: 'deployed and mirror remotes',
-    href: LINKS.repoDeployed,
-    linkLabel: 'Open the deployed repository',
+    claim: 'The source is public',
+    value: 'parent repository',
+    href: LINKS.repoMirror,
+    linkLabel: 'Open the parent repository',
   },
 ]
 
@@ -265,10 +270,10 @@ export const LIMITS: Limit[] = [
     linkLabel: 'Open the live app',
   },
   {
-    title: 'Repository access may be private',
+    title: 'The deployed fork may be private',
     body:
-      'The live app, the blob and the API are public. If either GitHub link returns 404, that repository is private at the moment you read this, and commit-level evidence needs access.',
-    href: LINKS.repoDeployed,
-    linkLabel: 'Open the deployed repository',
+      'The parent repository is public and carries the source and the history. The fork that serves the deployment is private at the time of writing. If its link returns 404, use the parent; the live app, the blob and the API are public either way.',
+    href: LINKS.repoMirror,
+    linkLabel: 'Open the parent repository',
   },
 ]

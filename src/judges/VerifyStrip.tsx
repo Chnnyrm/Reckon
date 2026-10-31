@@ -9,14 +9,14 @@ const groups = [
     href: LINKS.live,
   },
   {
-    name: 'Deployed repo',
-    proves: 'the source and commit history',
-    href: LINKS.repoDeployed,
+    name: 'Parent repo',
+    proves: 'the public source and commit history',
+    href: LINKS.repoMirror,
   },
   {
-    name: 'Mirror repo',
-    proves: 'the second remote',
-    href: LINKS.repoMirror,
+    name: 'Deployed fork',
+    proves: 'the deployment remote; may be private',
+    href: LINKS.repoDeployed,
   },
   {
     name: 'Walrus blob',
@@ -147,9 +147,9 @@ export function VerifyStrip() {
         </div>
 
         <p className="mt-2xl max-w-3xl text-xs leading-5 text-tertiary">
-          The repositories may be private when you read this. If a GitHub link returns 404, the
-          live app, the blob and the API are still public; commit-level evidence needs access.
-          That limitation is repeated in the next section.
+          The parent repository is public. If the fork link returns 404, the fork is still
+          private; the parent is public and carries the same source and history. The live app,
+          the blob and the API are public either way.
         </p>
       </Container>
     </section>

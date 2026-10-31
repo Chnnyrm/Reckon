@@ -118,8 +118,8 @@ export function TatumSection() {
               reader decide what it is worth.
             </p>
             <div className="mt-lg">
-              <ExternalLink href={LINKS.repoDeployed} className="text-sm">
-                Open the deployed repository
+              <ExternalLink href={LINKS.repoMirror} className="text-sm">
+                Open the parent repository
               </ExternalLink>
             </div>
           </div>

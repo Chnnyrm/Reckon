@@ -115,8 +115,8 @@ export function JudgesFooter() {
           <FooterColumn
             title="The build"
             links={[
-              { label: 'Deployed repo', href: LINKS.repoDeployed },
-              { label: 'Mirror repo', href: LINKS.repoMirror },
+              { label: 'Parent repo', href: LINKS.repoMirror },
+              { label: 'Deployed fork', href: LINKS.repoDeployed },
               { label: 'Tatum', href: LINKS.tatum },
             ]}
           />

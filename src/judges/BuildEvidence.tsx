@@ -41,19 +41,19 @@ export function BuildEvidence() {
               <BuildPoint
                 title="Scaffold and product shell"
                 body="The initial commit and the page structure came from the builder."
-                href={`${LINKS.repoDeployed}/commit/47099ac`}
+                href={`${LINKS.repoMirror}/commit/47099ac`}
                 label="Open the scaffold commit"
               />
               <BuildPoint
                 title="The Walrus write path"
                 body="The memory bridge and the position record were written in the AI-authored commits."
-                href={`${LINKS.repoDeployed}/commit/4a8b7af`}
+                href={`${LINKS.repoMirror}/commit/4a8b7af`}
                 label="Open the memory commit"
               />
               <BuildPoint
                 title="The 402 payment route"
                 body="The Sui testnet payment challenge is an AI-authored commit, not a later hand-wave."
-                href={`${LINKS.repoDeployed}/commit/309c250`}
+                href={`${LINKS.repoMirror}/commit/309c250`}
                 label="Open the payment commit"
               />
             </ul>
@@ -65,8 +65,11 @@ export function BuildEvidence() {
               <ExternalLink href={LINKS.commits} className="text-sm">
                 Inspect the commit history
               </ExternalLink>
+              <ExternalLink href={LINKS.repoMirror} className="text-sm">
+                Parent repository
+              </ExternalLink>
               <ExternalLink href={LINKS.repoDeployed} className="text-sm">
-                Deployed repository
+                Deployed fork
               </ExternalLink>
             </div>
           </div>
@@ -121,8 +124,9 @@ export function BuildEvidence() {
           <SealCheck size={18} weight="fill" className="mt-0.5 shrink-0 text-reckon-accent" aria-hidden="true" />
           <p className="max-w-3xl text-sm leading-6 text-secondary">
             The build record is public in the same way the forecasting record is: a reader does
-            not have to take the page's word for it. If the repository is private when you
-            arrive, the link will say so; the live app and the blob stay public.
+            not have to take the page's word for it. The parent repository is public. The fork
+            that serves the deployment may still be private; if its link returns 404, the source
+            and history are at the parent.
           </p>
         </div>
       </Container>
