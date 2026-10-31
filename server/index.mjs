@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import tatumRoutes from './routes/tatum.mjs'
 import reckonRoutes from './routes/reckon.mjs'
+import verifyRoutes from './routes/verify.mjs'
 import { credentialGuard } from './credential-guard.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -33,6 +34,7 @@ app.use(credentialGuard)
 
 app.use('/api/tatum', tatumRoutes)
 app.use('/api', reckonRoutes)
+app.use('/api', verifyRoutes)
 
 const server = createHttpServer(app)
 
