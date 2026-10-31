@@ -29,3 +29,44 @@ something where a credentials file exists, and Vercel supplies the other two.
 `/api/memory/status` reports `configured: true` only when both the account id
 and a valid key are present. Without them the API still answers: reads serve
 the cache with `memoryAvailable: false` and `memoryReason: "not_configured"`.
+
+## Verified locally
+
+`npm install --legacy-peer-deps`, `npm run build`, then
+`NODE_ENV=production node server/index.mjs` with the variables above, no
+`/creds` directory and no `/creds/creds.json`:
+
+- `GET /` → 200, the built `dist/index.html`
+- `GET /assets/index-*.js` → 200
+- `GET /api/positions` → 200 JSON
+- `POST /api/positions` → 201 with `walrus.jobId`; polling that job reached
+  `done` with a blob id after ~12s, and the next `GET /api/positions` returned
+  the row from recall with `onWalrus: true` and the same blob id
+
+Recall against the live relayer measured 3.8s cold and 1.0–1.2s warm in the
+`reckon` namespace (7.3s cold, 1.6–1.8s warm in a namespace holding four
+memories). A full `GET /api/positions` after the write took 2.5s including the
+Polymarket grading fetches. A recall that never answers is cut off at 15s and
+serves the cache with `memoryAvailable: false`.
+
+## What will not work on Vercel
+
+- **This was not deployed.** There is no Vercel CLI or token in this
+  environment, so no `vercel deploy` ran. `vercel.json` was checked against
+  the published `vercel.json` schema and the function was exercised locally as
+  a bare `(req, res)` handler; the CDN-side rewrites themselves are untested.
+- **`/api/oracle/verdict`'s digest fallback.** When mppx does not answer, the
+  route verifies a digest by fetching
+  `http://localhost:${PORT ?? 3000}/api/verify` — a self-call to the local
+  listener. On Vercel the function is invoked directly and nothing listens on
+  a local port, so that fetch fails and the route answers 402. The normal
+  mppx charge path does not use the self-call and is unaffected.
+- **Cross-instance visibility of a just-written position.** Writes are
+  acknowledged with a job, and the blob commits later (~12s above). Until it
+  does, the position is only in the instance's `/tmp` cache, so a read that
+  lands on another instance may not show it yet. That is the existing async
+  write design, not a regression.
+- **The `/tmp` cache is not durable.** Each function instance has its own
+  `/tmp`, lost on cold start. Reads rebuild from recall, which is the source
+  of truth; the cache only covers a failed recall and uncommitted writes.
+
