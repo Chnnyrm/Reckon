@@ -7,7 +7,14 @@ import {
 } from '@phosphor-icons/react'
 
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
+  // Read the preference during the first render. The film decides whether to
+  // autoplay on mount, and a false first frame would start one before the
+  // effect could pause it.
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  )
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
