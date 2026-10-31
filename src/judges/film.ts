@@ -232,7 +232,10 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
 }
 
 export function coverOpacityAt(localMs: number): number {
-  return 1 - easeInOut(span(localMs, FIRST_LINE_AT, COVER_MS))
+  // A plain smoothstep, not the film's fast-out easing curve. The cover has
+  // to read as a 350ms dissolve rather than a snap in its last frames.
+  const t = clamp01((localMs - FIRST_LINE_AT) / (COVER_MS - FIRST_LINE_AT))
+  return 1 - t * t * (3 - 2 * t)
 }
 
 export function formatClock(seconds: number): string {

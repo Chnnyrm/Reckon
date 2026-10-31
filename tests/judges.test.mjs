@@ -230,7 +230,7 @@ test('the cover holds for two and a half seconds', () => {
   assert.ok(coverOpacityAt(0) > 0.999)
   assert.ok(coverOpacityAt(FIRST_LINE_AT) > 0.999, 'the cover is still opaque when the line starts')
   const midFade = coverOpacityAt(FIRST_LINE_AT + COVER_FADE_MS / 2)
-  assert.ok(midFade < 1 && midFade > 0, 'the cover must be mid dissolve')
+  assert.ok(midFade > 0.4 && midFade < 0.6, 'the cover must be mid dissolve')
   assert.ok(coverOpacityAt(COVER_MS) < 0.001, 'the cover must be gone when the scene starts')
   assert.equal(chapterDurationMs(CHAPTERS[0]), COVER_MS + CHAPTERS[0].sceneMs + HOLD_MS)
 })
