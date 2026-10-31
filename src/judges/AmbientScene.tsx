@@ -1,10 +1,11 @@
-// Ambient layer for the walkthrough. Deliberately small: one Points cloud, one
+// Ambient layer for the film. Deliberately small: one Points cloud, one
 // shader pair, no addons. It is imported lazily so the product routes and the
 // first paint of /judges never pay for three.js.
 //
 // Lifecycle:
 // - IntersectionObserver starts and stops the render loop as the stage enters
 //   and leaves the viewport.
+// - The `paused` prop comes from the player, so pausing the film stops the scene.
 // - document visibility pauses it as well.
 // - prefers-reduced-motion renders exactly one frame and never starts a loop.
 
@@ -79,8 +80,10 @@ const fragmentShader = `
   }
 `
 
-export default function AmbientScene() {
+export default function AmbientScene({ paused = false }: { paused?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null)
+  const pausedRef = useRef(paused)
+  const controlsRef = useRef<{ start: () => void; stop: () => void } | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -209,7 +212,7 @@ export default function AmbientScene() {
     }
 
     const tick = (now: number) => {
-      if (!active || !onScreen) {
+      if (!active || !onScreen || pausedRef.current) {
         frame = 0
         return
       }
@@ -218,7 +221,7 @@ export default function AmbientScene() {
     }
 
     const start = () => {
-      if (frame) return
+      if (frame || pausedRef.current) return
       last = performance.now()
       frame = window.requestAnimationFrame(tick)
     }
@@ -229,6 +232,8 @@ export default function AmbientScene() {
         frame = 0
       }
     }
+
+    controlsRef.current = { start, stop }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -256,6 +261,7 @@ export default function AmbientScene() {
 
     return () => {
       stop()
+      controlsRef.current = null
       observer.disconnect()
       resizeObserver.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
@@ -265,6 +271,14 @@ export default function AmbientScene() {
       renderer.domElement.remove()
     }
   }, [])
+
+  useEffect(() => {
+    pausedRef.current = paused
+    const controls = controlsRef.current
+    if (!controls) return
+    if (paused) controls.stop()
+    else controls.start()
+  }, [paused])
 
   return <div ref={hostRef} className="h-full w-full" />
 }

@@ -14,7 +14,7 @@ export function Limits() {
       <Container>
         <SectionHead
           id="limits-title"
-          index="08"
+          index="07"
           label="Limits"
           title="What this does not do."
           lede="The edges matter more than the pitch. These are the places where the product is narrower than the page could make it sound."
@@ -70,8 +70,8 @@ export function Limits() {
           </div>
           <div className="flex flex-col gap-md sm:flex-row lg:flex-col">
             <ExternalButton href={LINKS.live}>Open the live app</ExternalButton>
-            <ScrollButton target="walkthrough">
-              Replay the walkthrough
+            <ScrollButton target="demo">
+              Replay the film
               <ArrowRight size={14} weight="bold" aria-hidden="true" />
             </ScrollButton>
           </div>

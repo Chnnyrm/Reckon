@@ -9,7 +9,7 @@ export function TatumSection() {
       <Container>
         <SectionHead
           id="tatum-title"
-          index="05"
+          index="04"
           label="Tatum"
           title="Tatum builds the app. Verification still has a gap."
           lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client for REST and JSON-RPC work. Sui is the exception: Tatum has no Sui JSON-RPC host, so payment verification calls Sui GraphQL today."

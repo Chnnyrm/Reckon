@@ -40,7 +40,7 @@ export function WalrusSection() {
           <div>
             <SectionHead
               id="record-title"
-              index="04"
+              index="03"
               label="The record"
               title="The record lives in Walrus Memory."
               lede="A position is a sentence before it is a row. The app posts that sentence to Walrus Memory, which returns a job and commits an encrypted blob to Walrus. The record is rebuilt from recall on every read, so the durable copy is the memory, not a local database."
@@ -127,7 +127,7 @@ export function WalrusSection() {
 
         <div className="mt-4xl grid gap-md sm:grid-cols-2 lg:grid-cols-4">
           <Metric value="3.8s" label="Recall, cold" />
-          <Metric value="1.0-1.2s" label="Recall, warm" />
+          <Metric value="1.0 to 1.2s" label="Recall, warm" />
           <Metric value="15s" label="Recall bound" />
           <Metric value="~12s" label="Write commit" />
         </div>

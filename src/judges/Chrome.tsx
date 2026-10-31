@@ -1,79 +1,34 @@
-import { useEffect, useState } from 'react'
 import { ArrowUp } from '@phosphor-icons/react'
 import { Logo } from '../components/Logo'
-import { ExternalButton, ExternalLink, Container, ScrollButton } from './ui'
+import { ExternalButton, ExternalLink, Container } from './ui'
 import { CAPTURE_DATE, LINKS } from './data'
 
 const focus =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-reckon-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black'
 
-function ScrollProgress() {
-  const [progress, setProgress] = useState(0)
-
-  useEffect(() => {
-    let frame = 0
-    const update = () => {
-      frame = 0
-      const root = document.documentElement
-      const max = root.scrollHeight - window.innerHeight
-      const next = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
-      setProgress(next)
-    }
-    const onScroll = () => {
-      if (frame) return
-      frame = window.requestAnimationFrame(update)
-    }
-    update()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-    }
-  }, [])
-
-  return (
-    <div aria-hidden="true" className="fixed left-0 top-0 z-50 h-0.5 w-full bg-transparent">
-      <div
-        className="h-full origin-left bg-reckon-accent"
-        style={{ transform: `scaleX(${progress})` }}
-      />
-    </div>
-  )
-}
-
 export function JudgesHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-primary bg-primary">
-      <Container className="flex h-16 items-center justify-between gap-md">
+      <Container className="flex h-14 items-center justify-between gap-sm">
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}
           aria-label="Reckon, back to top"
-          className={`rounded-md ${focus}`}
+          className={`shrink-0 rounded-md ${focus}`}
         >
-          <Logo size={28} />
+          <Logo size={20} />
         </button>
 
-        <nav aria-label="Page sections" className="hidden items-center gap-xs lg:flex">
-          <ScrollButton target="walkthrough" variant="quiet" className="px-lg py-md">
-            Walkthrough
-          </ScrollButton>
-          <ScrollButton target="build" variant="quiet" className="px-lg py-md">
-            Build
-          </ScrollButton>
-          <ScrollButton target="record" variant="quiet" className="px-lg py-md">
-            Record
-          </ScrollButton>
-          <ScrollButton target="limits" variant="quiet" className="px-lg py-md">
-            Limits
-          </ScrollButton>
-        </nav>
+        <h1 className="min-w-0 flex-1 truncate text-center text-xs font-normal text-secondary sm:text-sm">
+          A forecasting record you can audit
+        </h1>
 
-        <ExternalButton href={LINKS.live} className="shrink-0 px-lg py-md">
-          <span className="sm:hidden">Live app</span>
-          <span className="hidden sm:inline">Open the live app</span>
+        <ExternalButton
+          href={LINKS.live}
+          className="min-h-10 shrink-0 px-md py-sm text-xs"
+        >
+          <span className="sm:hidden">Live</span>
+          <span className="hidden sm:inline">Live app</span>
         </ExternalButton>
       </Container>
     </header>
@@ -163,4 +118,3 @@ function FooterColumn({
   )
 }
 
-export { ScrollProgress }

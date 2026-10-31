@@ -1,5 +1,7 @@
 import { GitCommit, SealCheck } from '@phosphor-icons/react'
 import {
+  AI_AUTHOR,
+  AI_COMMIT_COUNT,
   AI_COMMITS,
   LINKS,
   TATUM_ID,
@@ -19,10 +21,10 @@ export function BuildEvidence() {
           <div>
             <SectionHead
               id="build-title"
-              index="03"
+              index="02"
               label="The build"
               title="Built with Tatum AI Builder."
-              lede="This app was built in Tatum AI Builder. Ten commits on the project are authored by AI Builder, and the build ID ties the running app to that workspace. The evidence is in the history, not in a badge on this page."
+              lede={`This app was built in Tatum AI Builder. ${AI_COMMIT_COUNT} commits on the project are authored by AI Builder, and the build ID ties the running app to that workspace. The evidence is in the history, not in a badge on this page.`}
             />
 
             <div className="mt-3xl rounded-2xl border border-primary bg-secondary p-xl sm:p-2xl">
@@ -63,7 +65,7 @@ export function BuildEvidence() {
                 Tatum
               </ExternalLink>
               <ExternalLink href={LINKS.commits} className="text-sm">
-                Inspect the commit history
+                Read the AI Builder commit history
               </ExternalLink>
               <ExternalLink href={LINKS.repoMirror} className="text-sm">
                 Parent repository
@@ -81,7 +83,7 @@ export function BuildEvidence() {
                 <p className="text-sm font-semibold text-primary">Commit evidence</p>
               </div>
               <span className="rounded-full border border-reckon-accent/40 px-md py-xs text-xs font-medium text-reckon-accent">
-                10 by AI Builder
+                {AI_COMMIT_COUNT} by AI Builder
               </span>
             </div>
 
@@ -99,7 +101,7 @@ export function BuildEvidence() {
                     <span className="shrink-0 font-mono text-xs text-quaternary">{commit.sha}</span>
                   </div>
                   <p className="mt-xs break-all font-mono text-xs text-quaternary">
-                    AI Builder &lt;ai-builder@tatum.io&gt;
+                    {AI_AUTHOR}
                   </p>
                   <p className="mt-xs text-xs text-quaternary">{commit.date}</p>
                 </li>
@@ -108,12 +110,13 @@ export function BuildEvidence() {
 
             <div className="border-t border-primary px-xl py-lg">
               <p className="text-xs leading-5 text-quaternary">
-                The page states the stable number, 10 AI-authored commits, and links to the
-                history rather than freezing a total that changes with every page edit.
+                The page states the stable number, {AI_COMMIT_COUNT} AI-authored commits, and
+                links to the history rather than freezing a total that changes with every page
+                edit.
               </p>
               <div className="mt-md">
                 <ExternalLink href={LINKS.commits} className="text-sm">
-                  See all commits
+                  Read the commit history
                 </ExternalLink>
               </div>
             </div>

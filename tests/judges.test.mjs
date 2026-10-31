@@ -1,6 +1,7 @@
 // Guards for the public /judges page. These are source-level invariants, not a
 // browser test: they catch a fabricated value, a broken link attribute, a
-// non-ASCII glyph or a token that should not be on the page before a build.
+// non-ASCII glyph, a broken film clock or a token that should not be on the
+// page before a build.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -31,11 +32,16 @@ test('the verified facts are the ones in the page', () => {
     '1.0 to 1.2s',
     '15s',
     'about 12 seconds',
-    '10 commits',
+    'AI Builder <ai-builder@tatum.io>',
   ]
   for (const fact of facts) {
     assert.ok(all.includes(fact), `missing verified fact: ${fact}`)
   }
+
+  assert.match(sources['data.ts'], /export const AI_COMMIT_COUNT = 10/)
+  assert.match(sources['BuildEvidence.tsx'], /AI_COMMIT_COUNT/)
+  assert.match(sources['BuildEvidence.tsx'], /LINKS\.commits/)
+  assert.match(sources['data.ts'], /commits\/main/)
 })
 
 test('the page is ASCII only', () => {
@@ -72,17 +78,80 @@ test('the page keeps the dark brand constraints', () => {
   assert.match(all, /bg-reckon-accent/)
 })
 
-test('the scene is lazy, pausable and reduced-motion safe', () => {
-  const walkthrough = readFileSync(join(judgesDir, 'Walkthrough.tsx'), 'utf8')
-  const scene = readFileSync(join(judgesDir, 'AmbientScene.tsx'), 'utf8')
-  const css = readFileSync(join(judgesDir, 'judges.css'), 'utf8')
+test('the film is first, lazy, and has one clock', () => {
+  const page = sources['JudgesPage.tsx']
+  const film = sources['Film.tsx']
+  const model = sources['film.ts']
+  const scenes = sources['FilmStages.tsx']
 
-  assert.match(walkthrough, /lazy\(\(\) => import\('\.\/AmbientScene'\)\)/)
-  assert.match(walkthrough, /<Suspense/)
+  assert.match(page, /lazy\(\(\) => import\('\.\/Film'\)\)/)
+  assert.match(page, /<Suspense/)
+  assert.ok(
+    page.indexOf('<Suspense') < page.indexOf('<Problem'),
+    'the film must be the first section after the masthead'
+  )
+  for (const section of [
+    '<Problem',
+    '<BuildEvidence',
+    '<WalrusSection',
+    '<TatumSection',
+    '<PaymentsSection',
+    '<VerifyStrip',
+    '<Limits',
+  ]) {
+    assert.ok(page.includes(section), `missing section: ${section}`)
+  }
+
+  assert.match(film, /window\.requestAnimationFrame/)
+  for (const [file, source] of Object.entries({
+    'Film.tsx': film,
+    'film.ts': model,
+    'FilmStages.tsx': scenes,
+    'FilmCover.tsx': sources['FilmCover.tsx'],
+  })) {
+    assert.doesNotMatch(source, /\bsetTimeout\s*\(|\bsetInterval\s*\(/, `${file} uses a timer`)
+    assert.doesNotMatch(source, /\bfetch\s*\(|XMLHttpRequest/, `${file} calls the network`)
+  }
+
+  assert.equal((model.match(/id: '/g) ?? []).length, 6, 'expected six chapters')
+  assert.equal((model.match(/coverTitle: '/g) ?? []).length, 6, 'expected six cover cards')
+  assert.match(model, /coverTitle: 'Built with Tatum AI Builder'/)
+  assert.match(model, /sceneMs:/)
+  assert.match(scenes, /function Pointer\(/)
+  assert.match(scenes, /function BuilderScene\(/)
+  assert.match(scenes, /TATUM_ID/)
+  assert.match(scenes, /AI_COMMIT_COUNT/)
+  assert.match(scenes, /AI_AUTHOR/)
+})
+
+test('brand marks are real files with intrinsic sizes', () => {
+  const brand = sources['Brand.tsx']
+  assert.match(brand, /\/brands\/tatum-chip\.png/)
+  assert.match(brand, /\/brands\/sui-chip\.png/)
+  assert.match(brand, /\/brands\/memwal-chip\.png/)
+  assert.match(brand, /\/brands\/walrus-white\.png/)
+  assert.match(brand, /width=\{width\}/)
+  assert.match(brand, /height=\{height\}/)
+  assert.match(brand, /alt=/)
+})
+
+test('the scene is lazy, pausable and reduced-motion safe', () => {
+  const film = sources['Film.tsx']
+  const scene = sources['AmbientScene.tsx']
+  const css = sources['judges.css']
+  const cover = sources['FilmCover.tsx']
+
+  assert.match(film, /lazy\(\(\) => import\('\.\/AmbientScene'\)\)/)
+  assert.match(film, /<Suspense/)
+  assert.match(film, /paused=\{!playing\}/)
+  assert.match(film, /useReducedMotion/)
+  assert.match(film, /staticMode/)
   assert.match(scene, /IntersectionObserver/)
   assert.match(scene, /visibilitychange/)
   assert.match(scene, /prefers-reduced-motion: reduce/)
+  assert.match(scene, /pausedRef/)
   assert.match(css, /prefers-reduced-motion: reduce/)
+  assert.match(cover, /coverOpacityAt/)
 })
 
 test('the route is isolated from the product app', () => {

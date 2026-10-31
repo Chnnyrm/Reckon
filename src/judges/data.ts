@@ -9,15 +9,16 @@
 
 export const CAPTURE_DATE = '31 October 2026'
 export const LIVE_APP = 'https://reckon-three-beta.vercel.app'
-// The parent repository is public and carries the commit history. The fork is
-// the deployment remote and may still be private; only the fork's link is
-// caveated.
+// Both repositories are public. The parent carries the commit history and is
+// the one to submit; the fork is the deployment target.
 export const REPO_PUBLIC = 'https://github.com/Ksschkw/Reckon'
 export const REPO_FORK = 'https://github.com/Chnnyrm/Reckon'
 export const REPO_DEPLOYED = REPO_FORK
 export const REPO_MIRROR = REPO_PUBLIC
 
 export const TATUM_ID = '6addae51f9f9306c432153f9'
+export const AI_COMMIT_COUNT = 10
+export const AI_AUTHOR = 'AI Builder <ai-builder@tatum.io>'
 export const MEMORY_NAMESPACE = 'reckon'
 export const MEMORY_ACCOUNT =
   '0xd6122a37730a5c4d4cd72a690cf8f9d7a2590b33567d266e1faef3e9b6dbeeac'
@@ -71,8 +72,8 @@ export const DEMO_MARKET = {
   outcomes: ['Yes', 'No'],
 } as const
 
-// The three record rows are walkthrough fixtures built only from captured
-// market values. The live record returned two committed positions at capture;
+// The three record rows are film fixtures built only from captured market
+// values. The live record returned two committed positions at capture;
 // this view exists to show how grading reads. It is not a live feed.
 export const RECORD_ROWS = [
   {
@@ -183,7 +184,7 @@ export const EVIDENCE: Evidence[] = [
   },
   {
     claim: 'Tatum AI Builder wrote commits',
-    value: '10 commits, ID 6addae51...',
+    value: `${AI_COMMIT_COUNT} commits, ID ${TATUM_ID.slice(0, 8)}...`,
     href: LINKS.commits,
     linkLabel: 'Inspect the commit history',
   },
@@ -263,9 +264,9 @@ export const LIMITS: Limit[] = [
     linkLabel: 'Open the committed blob',
   },
   {
-    title: 'The walkthrough is a reconstruction',
+    title: 'The film is a reconstruction',
     body:
-      'The market, the 402 body and the blob were captured on 31 October 2026. Clicking the five steps does not call an API. The live app is one link away when you want the real thing.',
+      'The market, the 402 body and the blob were captured on 31 October 2026. The six chapters play from those fixtures and call no API. The live app is one link away when you want the real thing.',
     href: LINKS.live,
     linkLabel: 'Open the live app',
   },

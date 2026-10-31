@@ -48,7 +48,7 @@ export function PaymentsSection() {
       <Container>
         <SectionHead
           id={`${headingId}-title`}
-          index="06"
+          index="05"
           label="Agent payments"
           title="An agent pays for one call."
           lede="The oracle endpoint has no account system. It is a public URL that answers 402 until the request carries a valid Sui payment digest. This is the flow from the agent's side: read the challenge, pay, retry, get the verdict."

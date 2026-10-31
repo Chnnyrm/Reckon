@@ -72,7 +72,7 @@ export function VerifyStrip() {
         <div className="flex flex-col justify-between gap-2xl lg:flex-row lg:items-end">
           <SectionHead
             id="verify-title"
-            index="07"
+            index="06"
             label="Verification"
             title="Every claim, with a link."
             lede="If a number appears on this page, it came from one of these places. Open them in order, or jump to the one you doubt. A claim without a link would be a bug."
