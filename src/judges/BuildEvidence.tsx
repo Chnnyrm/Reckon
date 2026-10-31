@@ -30,7 +30,12 @@ export function BuildEvidence() {
             <div className="mt-3xl rounded-2xl border border-primary bg-secondary p-xl sm:p-2xl">
               <div className="flex flex-wrap items-center justify-between gap-md">
                 <p className="text-xs font-medium text-quaternary">Tatum AI Builder ID</p>
-                <CopyButton value={TATUM_ID} label="Copy the Tatum AI Builder id" />
+                <div className="flex flex-wrap items-center gap-md">
+                  <ExternalLink href={LINKS.commits} className="text-xs" icon={false}>
+                    Commit history
+                  </ExternalLink>
+                  <CopyButton value={TATUM_ID} label="Copy the Tatum AI Builder id" />
+                </div>
               </div>
               <p className="mt-md break-all font-mono text-sm text-primary sm:text-base">{TATUM_ID}</p>
               <p className="mt-md text-xs leading-5 text-quaternary">
