@@ -13,6 +13,7 @@ export type Chapter = {
   coverTitle: string
   coverLine: string
   caption: string
+  line: string
   sceneMs: number
 }
 
@@ -24,7 +25,8 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'Markets',
     coverLine: 'Live prediction markets, real prices.',
     caption: "Markets come from Polymarket's public API with live prices.",
-    sceneMs: 7000,
+    line: 'Reckon is a forecasting record for prediction markets. A forecaster takes a position, and the app writes down the price at that exact moment. It is built for forecasters and analysts, and for the software agents that depend on their calls.',
+    sceneMs: 22000,
   },
   {
     id: 'position',
@@ -33,7 +35,8 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'A position',
     coverLine: 'Written with the price at the moment it was taken.',
     caption: 'The position is written with the price at the moment it was taken.',
-    sceneMs: 7400,
+    line: 'Taking a position means choosing a side at a price you can see. You pick yes or no, and the app fixes the entry price the instant you confirm. If the price moves a minute later, the record still shows the price you took.',
+    sceneMs: 22000,
   },
   {
     id: 'walrus',
@@ -42,7 +45,8 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'Walrus Memory',
     coverLine: 'Timestamped on Sui before the outcome.',
     caption: 'The write takes about 12 seconds to commit; recall is the source of truth.',
-    sceneMs: 8600,
+    line: 'The position goes to Walrus Memory as a short sentence, and its hash is timestamped on Sui. The blob is public, so anyone can read the proof. That sentence is fixed once the outcome lands, and it cannot be edited or quietly removed.',
+    sceneMs: 26000,
   },
   {
     id: 'record',
@@ -51,7 +55,8 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'The record',
     coverLine: 'Graded mark to market, not by hindsight.',
     caption: 'These markets have not resolved. This is movement, not win rate.',
-    sceneMs: 7000,
+    line: 'Grading is mark to market, not hindsight. These markets resolve months from now, so the record shows the mark at each check, not a result picked after the fact. A position that moved against us stays visible, with its entry and its mark.',
+    sceneMs: 23000,
   },
   {
     id: 'agent',
@@ -60,7 +65,8 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'x402',
     coverLine: 'An agent pays 0.01 USDC on Sui.',
     caption: 'The endpoint is public, the payment is the credential, and one digest buys one call.',
-    sceneMs: 10000,
+    line: 'An agent has no account here, so it pays for each call instead. It sends one cent in USDC on Sui testnet in a gasless transfer, and gets one digest in return. Reckon verifies that digest on chain before it answers, and one digest buys one call.',
+    sceneMs: 31000,
   },
   {
     id: 'builder',
@@ -69,12 +75,24 @@ export const CHAPTERS: Chapter[] = [
     coverTitle: 'Built with Tatum AI Builder',
     coverLine: 'One prompt produced the shell. We extended it by hand.',
     caption: 'The shell was generated. The Walrus and x402 integrations were built by hand.',
-    sceneMs: 10000,
+    line: 'The shell was generated with Tatum AI Builder, then extended by hand. We wrote the Walrus Memory client and the payment route ourselves. The commit history shows which commits came from the builder, so you can check how it was made.',
+    sceneMs: 26000,
   },
 ]
 
+// SpeechSynthesis does not report how long an utterance will run, so the film
+// budgets 13 characters per second at the voice's slow rate and adds two
+// seconds for breath. A chapter never ends before its line can be spoken. The
+// scene keeps its own motion through that time, so the margin is never a still
+// frame.
+export const SPEECH_CHARS_PER_SECOND = 13
+
+export function speechBudgetMs(line: string): number {
+  return Math.round((line.length / SPEECH_CHARS_PER_SECOND) * 1000) + 2000
+}
+
 export function chapterDurationMs(chapter: Chapter): number {
-  return COVER_MS + chapter.sceneMs + HOLD_MS
+  return COVER_MS + Math.max(chapter.sceneMs, speechBudgetMs(chapter.line)) + HOLD_MS
 }
 
 export const CHAPTER_STARTS: number[] = (() => {
@@ -161,7 +179,9 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
         startMs: start,
         localMs: local,
         durationMs: duration,
-        scene: clamp01((local - COVER_MS) / chapter.sceneMs),
+        // The scene clock covers the final frame hold as well, so a chapter
+        // never freezes at its last beat while the next title waits.
+        scene: clamp01((local - COVER_MS) / (duration - COVER_MS)),
         fill: clamp01(local / duration),
         cover: clamp01(local / COVER_MS),
       }
