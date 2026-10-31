@@ -19,7 +19,30 @@ module.exports = {
     // Poppins arrives through the tokens' own fontFamily.sans
     // (--font-family-sans) — no override here, or the token stops being the
     // single source for the typeface.
-    extend: tokens.theme.extend,
+    extend: {
+      ...tokens.theme.extend,
+      colors: {
+        ...tokens.theme.extend.colors,
+        reckon: {
+          bg: '#000000',
+          card: '#181818',
+          raised: '#1F1F1F',
+          border: '#272727',
+          divider: '#313131',
+          primary: '#FFFFFF',
+          secondary: '#9B9B9B',
+          muted: '#6B6B6B',
+          accent: '#FF7A1A',
+          up: '#4ADE80',
+          down: '#F87171',
+        },
+      },
+      fontFamily: {
+        ...tokens.theme.extend.fontFamily,
+        sans: ['Geist', 'Poppins', 'sans-serif'],
+        wordmark: ["'Space Grotesk'", 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }
