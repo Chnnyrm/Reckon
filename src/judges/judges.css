@@ -11,6 +11,24 @@
   scroll-margin-top: 5rem;
 }
 
+/* The narration panel changes its whole chapter line at once. It fades in so
+   the reader sees the new paragraph settle without a typewriter effect. The
+   global reduced-motion rule in src/index.css collapses this to no motion. */
+.narration-line {
+  animation: narration-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes narration-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .judges-code {
   overflow-wrap: anywhere;
   word-break: break-word;

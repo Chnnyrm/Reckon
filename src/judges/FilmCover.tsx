@@ -16,19 +16,25 @@ export function CoverCard({
   index,
   localMs,
   staticMode,
+  held = false,
 }: {
   chapter: Chapter
   index: number
   localMs: number
   staticMode: boolean
+  held?: boolean
 }) {
-  const at = (start: number) => (staticMode ? 1 : easeOut(span(localMs, start, start + 320)))
+  // A paused frame has to read as a title card, not as a black stage. When the
+  // clock is not running the cover is shown in full; while it runs, the card
+  // still fades in over the first third of a second.
+  const still = staticMode || held
+  const at = (start: number) => (still ? 1 : easeOut(span(localMs, start, start + 320)))
   const numberIn = at(0)
   const titleIn = at(60)
   const lineIn = at(120)
   const markIn = at(180)
-  const rule = staticMode ? 1 : easeOut(span(localMs, 60, 560))
-  const opacity = staticMode ? 1 : coverOpacityAt(localMs)
+  const rule = still ? 1 : easeOut(span(localMs, 60, 560))
+  const opacity = still ? 1 : coverOpacityAt(localMs)
 
   return (
     <div

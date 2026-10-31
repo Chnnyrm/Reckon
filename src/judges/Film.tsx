@@ -4,20 +4,21 @@ import {
   ListBullets,
   Pause,
   Play,
+  SpeakerHigh,
   SpeakerSlash,
 } from '@phosphor-icons/react'
 import { Logo } from '../components/Logo'
-import { Container, useReducedMotion } from './ui'
+import { useReducedMotion } from './ui'
 import {
   CHAPTERS,
   CHAPTER_STARTS,
   TOTAL_MS,
   TOTAL_SECONDS,
   chapterDurationMs,
-  clamp01,
   formatClock,
   timelineAt,
 } from './film'
+import { narrator } from './narration'
 import { CoverCard } from './FilmCover'
 import { ChapterScene } from './FilmStages'
 
@@ -26,21 +27,43 @@ const AmbientScene = lazy(() => import('./AmbientScene'))
 const FOCUS =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-reckon-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black'
 
+const PLAYER = 'mx-auto w-full max-w-[1100px] px-xl sm:px-2xl'
+
 export default function Film() {
   const reduced = useReducedMotion()
   const [elapsed, setElapsed] = useState(0)
   const elapsedRef = useRef(0)
-  const [playing, setPlaying] = useState(() => !reduced)
-  const [started, setStarted] = useState(() => !reduced)
-  const [chaptersOpen, setChaptersOpen] = useState(() => reduced)
+  const [playing, setPlaying] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [soundOn, setSoundOn] = useState(true)
+  const [voiceReady, setVoiceReady] = useState(false)
+  const [speechEpoch, setSpeechEpoch] = useState(0)
+  const [chaptersOpen, setChaptersOpen] = useState(false)
+
   const frame = timelineAt(elapsed)
   const staticMode = reduced && !started
 
   useEffect(() => {
-    if (!reduced) return
-    setPlaying(false)
-    setChaptersOpen(true)
-  }, [reduced])
+    let live = true
+    narrator.ready().then((ok) => {
+      if (!live) return
+      setVoiceReady(ok)
+      if (!ok) setSoundOn(false)
+    })
+    return () => {
+      live = false
+      narrator.cancel()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (started && playing && soundOn && voiceReady) {
+      narrator.speak(CHAPTERS[frame.index].line)
+    } else {
+      narrator.cancel()
+    }
+    return () => narrator.cancel()
+  }, [started, playing, soundOn, voiceReady, frame.index, speechEpoch])
 
   useEffect(() => {
     if (!playing) return
@@ -59,23 +82,26 @@ export default function Film() {
     return () => window.cancelAnimationFrame(raf)
   }, [playing])
 
-  const jumpTo = useCallback((index: number, within = 0) => {
-    // Land just inside the cover rather than on its first empty frame, so a
-    // seek while paused shows the title card rather than a black stage.
-    const offset = Math.max(400, chapterDurationMs(CHAPTERS[index]) * clamp01(within))
-    const next = CHAPTER_STARTS[index] + offset
-    elapsedRef.current = next
-    setElapsed(next)
+  const start = useCallback((withSound: boolean) => {
+    setStarted(true)
+    setPlaying(true)
+    setSoundOn(withSound)
+    if (withSound) {
+      narrator.ready().then((ok) => {
+        setVoiceReady(ok)
+        if (!ok) setSoundOn(false)
+      })
+    }
   }, [])
 
-  const seekTo = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
-      const rect = event.currentTarget.getBoundingClientRect()
-      const ratio = clamp01((event.clientX - rect.left) / Math.max(1, rect.width))
-      jumpTo(index, Math.min(0.999, ratio))
-    },
-    [jumpTo]
-  )
+  const seekToChapter = useCallback((index: number) => {
+    // A chapter is one narration line. Seeking lands on its first frame, and
+    // the speech effect cancels the old utterance and speaks the new line.
+    const next = CHAPTER_STARTS[index]
+    elapsedRef.current = next
+    setElapsed(next)
+    setSpeechEpoch((epoch) => epoch + 1)
+  }, [])
 
   const togglePlay = useCallback(() => {
     if (playing) {
@@ -84,6 +110,7 @@ export default function Film() {
     }
     setStarted(true)
     setPlaying(true)
+    setSpeechEpoch((epoch) => epoch + 1)
   }, [playing])
 
   const replay = useCallback(() => {
@@ -91,213 +118,372 @@ export default function Film() {
     setElapsed(0)
     setStarted(true)
     setPlaying(true)
+    setSpeechEpoch((epoch) => epoch + 1)
     setChaptersOpen(false)
   }, [])
 
+  const toggleSound = useCallback(() => {
+    setSoundOn((on) => !on)
+  }, [])
+
+  const label = staticMode
+    ? 'Static'
+    : playing
+      ? 'Playing'
+      : started
+        ? 'Paused'
+        : 'Ready'
+
   return (
     <section id="demo" aria-label="The Reckon demo" className="border-b border-primary py-lg sm:py-2xl">
-      <Container>
-        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-primary bg-secondary shadow-2xl">
-          <div className="flex h-11 items-center justify-between gap-sm border-b border-primary px-lg sm:px-2xl">
-            <div className="flex min-w-0 items-center gap-sm">
-              <Logo size={18} />
-              <span className="text-xs text-quaternary" aria-hidden="true">
-                /
-              </span>
-              <span className="truncate text-xs font-medium text-secondary">The demo</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-md">
-              <span
-                className="inline-flex items-center gap-xs text-xs text-quaternary"
-                aria-label="Muted. This film has no audio."
-              >
-                <SpeakerSlash size={14} weight="bold" aria-hidden="true" />
-                <span className="hidden sm:inline">Muted</span>
-              </span>
-              <span className="font-mono text-xs text-quaternary">
-                {String(frame.index + 1).padStart(2, '0')} / {String(CHAPTERS.length).padStart(2, '0')}
-              </span>
-              <span className="inline-flex items-center gap-xs rounded-full border border-primary bg-primary px-sm py-xs text-xs text-secondary">
-                <span
-                  className={`h-1 w-1 rounded-full ${staticMode ? 'bg-reckon-accent' : playing ? 'bg-reckon-up' : 'bg-reckon-accent'}`}
-                  aria-hidden="true"
-                />
-                {staticMode ? 'Static' : playing ? 'Playing' : 'Paused'}
-              </span>
-            </div>
-          </div>
-
-          <div className="relative bg-primary">
-            {!reduced ? (
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
-                <Suspense fallback={null}>
-                  <AmbientScene paused={!playing} />
-                </Suspense>
-              </div>
-            ) : null}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-0 bg-primary/55"
-            />
-
-            <div className="relative min-h-[30rem] sm:aspect-video sm:min-h-[28rem]">
-              <div className="absolute inset-0 z-10">
-                <ChapterScene index={frame.index} progress={staticMode ? 1 : frame.scene} />
-              </div>
-              <CoverCard
-                chapter={frame.chapter}
-                index={frame.index}
-                localMs={frame.localMs}
-                staticMode={staticMode}
-              />
-            </div>
-          </div>
-
-          <div
-            className="border-t border-primary px-lg py-md sm:px-2xl"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            <div className="flex items-start gap-md">
-              <span className="mt-0.5 shrink-0 font-mono text-xs text-reckon-accent">
-                {String(frame.index + 1).padStart(2, '0')}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-primary">{frame.chapter.name}</p>
-                <p className="mt-xs text-sm leading-5 text-secondary">{frame.chapter.caption}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-primary px-lg py-md sm:px-2xl">
-            <div className="flex items-center justify-between gap-md text-xs text-quaternary">
-              <span>Chapters</span>
-              <span className="font-mono">
-                {formatClock(elapsed / 1000)} / {formatClock(TOTAL_SECONDS)}
-              </span>
-            </div>
-            <div className="mt-sm grid grid-cols-6 gap-xs">
-              {CHAPTERS.map((chapter, index) => {
-                const fill =
-                  index < frame.index
-                    ? 1
-                    : index === frame.index && !staticMode
-                      ? frame.fill
-                      : 0
-                return (
-                  <button
-                    key={chapter.id}
-                    type="button"
-                    onClick={(event) => seekTo(event, index)}
-                    aria-label={`Seek within chapter ${index + 1}, ${chapter.name}`}
-                    aria-current={index === frame.index ? 'step' : undefined}
-                    className={`flex min-h-11 min-w-0 flex-col justify-center rounded-sm ${FOCUS}`}
-                  >
-                    <span className="block h-1.5 w-full overflow-hidden rounded-full bg-divider">
-                      <span
-                        className="block h-full w-full origin-left bg-reckon-accent"
-                        style={{ transform: `scaleX(${fill})` }}
-                      />
-                    </span>
+      <div className={PLAYER}>
+        <div className="grid gap-xl md:grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)] md:items-start">
+          <div className="min-w-0 md:order-2">
+            <div className="overflow-hidden rounded-2xl border border-primary bg-secondary shadow-2xl">
+              <div className="flex h-11 items-center justify-between gap-sm border-b border-primary px-lg sm:px-2xl">
+                <div className="flex min-w-0 items-center gap-sm">
+                  <Logo size={18} />
+                  <span className="text-xs text-quaternary" aria-hidden="true">
+                    /
+                  </span>
+                  <span className="truncate text-xs font-medium text-secondary">The demo</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-md">
+                  <span className="font-mono text-xs text-quaternary">
+                    {String(frame.index + 1).padStart(2, '0')} /{' '}
+                    {String(CHAPTERS.length).padStart(2, '0')}
+                  </span>
+                  <span className="inline-flex items-center gap-xs rounded-full border border-primary bg-primary px-sm py-xs text-xs text-secondary">
                     <span
-                      className={`mt-xs block text-left text-xs leading-4 ${
-                        index === frame.index ? 'text-primary' : 'text-quaternary'
+                      className={`h-1 w-1 rounded-full ${
+                        staticMode ? 'bg-reckon-accent' : playing ? 'bg-reckon-up' : 'bg-reckon-accent'
                       }`}
-                    >
-                      <span className="block truncate sm:hidden">{chapter.segment}</span>
-                      <span className="hidden sm:block">{chapter.name}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+                      aria-hidden="true"
+                    />
+                    {label}
+                  </span>
+                </div>
+              </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-sm border-t border-primary px-lg py-md sm:px-2xl">
-            <div className="flex items-center gap-xs sm:gap-sm">
-              <button
-                type="button"
-                onClick={togglePlay}
-                className={`inline-flex min-h-11 items-center justify-center gap-sm rounded-lg bg-brand-solid px-md py-sm text-sm font-semibold text-black transition-colors duration-200 hover:bg-brand-solid-hover ${FOCUS}`}
-              >
-                {playing ? (
-                  <Pause size={15} weight="fill" aria-hidden="true" />
-                ) : (
-                  <Play size={15} weight="fill" aria-hidden="true" />
-                )}
-                {playing ? 'Pause' : 'Play'}
-              </button>
+              <div className="relative bg-primary">
+                {!reduced ? (
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
+                    <Suspense fallback={null}>
+                      <AmbientScene paused={!playing} />
+                    </Suspense>
+                  </div>
+                ) : null}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 bg-primary/55"
+                />
 
-              <button
-                type="button"
-                onClick={replay}
-                className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-md py-sm text-sm font-semibold text-primary transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent ${FOCUS}`}
-                aria-label="Replay the film from the start"
-              >
-                <ArrowCounterClockwise size={15} weight="bold" aria-hidden="true" />
-                <span className="hidden sm:inline">Replay</span>
-              </button>
+                <div className="relative w-full min-h-[30rem] sm:aspect-video sm:min-h-[32rem]">
+                  <div className="absolute inset-0 z-10">
+                    <ChapterScene index={frame.index} progress={staticMode ? 1 : frame.scene} />
+                  </div>
+                  <CoverCard
+                    chapter={frame.chapter}
+                    index={frame.index}
+                    localMs={frame.localMs}
+                    staticMode={staticMode}
+                    held={!playing}
+                  />
 
-              <button
-                type="button"
-                onClick={() => setChaptersOpen((open) => !open)}
-                aria-label="Show or hide the chapter list"
-                aria-expanded={chaptersOpen}
-                aria-controls="film-chapters"
-                className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-md py-sm text-sm font-semibold text-primary transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent ${FOCUS}`}
-              >
-                <ListBullets size={15} weight="bold" aria-hidden="true" />
-                <span className="hidden sm:inline">Chapters</span>
-              </button>
-            </div>
+                  {!started ? (
+                    <div className="absolute inset-x-0 bottom-0 z-30 border-t border-primary bg-primary px-lg py-lg sm:px-2xl">
+                      <div className="flex flex-col items-stretch gap-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+                        <button
+                          type="button"
+                          onClick={() => start(true)}
+                          className={`inline-flex min-h-11 w-full items-center justify-center gap-sm rounded-lg bg-brand-solid px-lg py-sm text-sm font-semibold text-black transition-colors duration-200 hover:bg-brand-solid-hover sm:w-auto ${FOCUS}`}
+                        >
+                          <Play size={15} weight="fill" aria-hidden="true" />
+                          {reduced ? 'Play with sound' : 'Play the demo with sound'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => start(false)}
+                          className={`inline-flex min-h-11 w-full items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-lg py-sm text-sm font-semibold text-primary transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent sm:w-auto ${FOCUS}`}
+                        >
+                          <SpeakerSlash size={15} weight="bold" aria-hidden="true" />
+                          Watch without sound
+                        </button>
+                      </div>
+                      <p className="mt-sm text-center text-xs leading-5 text-quaternary">
+                        {reduced
+                          ? 'Reduced motion is on. Nothing moves and nothing is spoken until you press play.'
+                          : 'The film waits on its first frame. Pressing play starts the picture and the voice together.'}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
-            <p className="hidden text-xs text-quaternary sm:block">
-              No audio. Every value is a captured fixture.
-            </p>
-          </div>
+              <div className="border-t border-primary px-lg py-md sm:px-2xl">
+                <div className="flex items-start gap-md">
+                  <span className="mt-0.5 shrink-0 font-mono text-xs text-reckon-accent">
+                    {String(frame.index + 1).padStart(2, '0')}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-primary">{frame.chapter.name}</p>
+                    <p className="mt-xs text-sm leading-5 text-secondary">
+                      {frame.chapter.caption}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          {chaptersOpen ? (
-            <div id="film-chapters" className="border-t border-primary bg-primary px-lg py-md sm:px-2xl">
-              <ol className="grid gap-xs sm:grid-cols-2 lg:grid-cols-3">
-                {CHAPTERS.map((chapter, index) => (
-                  <li key={chapter.id}>
+              <div className="border-t border-primary px-lg py-md sm:px-2xl">
+                <div className="flex items-center justify-between gap-md text-xs text-quaternary">
+                  <span>Chapters</span>
+                  <span className="font-mono">
+                    {formatClock(elapsed / 1000)} / {formatClock(TOTAL_SECONDS)}
+                  </span>
+                </div>
+                <div className="mt-sm grid grid-cols-6 gap-xs">
+                  {CHAPTERS.map((chapter, index) => {
+                    const fill =
+                      index < frame.index
+                        ? 1
+                        : index === frame.index && !staticMode
+                          ? frame.fill
+                          : 0
+                    return (
+                      <button
+                        key={chapter.id}
+                        type="button"
+                        onClick={() => seekToChapter(index)}
+                        aria-label={`Go to chapter ${index + 1}, ${chapter.name}`}
+                        aria-current={index === frame.index ? 'step' : undefined}
+                        className={`flex min-h-11 min-w-0 flex-col justify-center rounded-sm ${FOCUS}`}
+                      >
+                        <span className="block h-1.5 w-full overflow-hidden rounded-full bg-divider">
+                          <span
+                            className="block h-full w-full origin-left bg-reckon-accent"
+                            style={{ transform: `scaleX(${fill})` }}
+                          />
+                        </span>
+                        <span
+                          className={`mt-xs block text-left text-xs leading-4 ${
+                            index === frame.index ? 'text-primary' : 'text-quaternary'
+                          }`}
+                        >
+                          <span className="block truncate sm:hidden">{chapter.segment}</span>
+                          <span className="hidden sm:block">{chapter.name}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {started ? (
+                <div className="flex flex-wrap items-center justify-between gap-sm border-t border-primary px-lg py-md sm:px-2xl">
+                  <div className="flex flex-wrap items-center gap-xs sm:gap-sm">
                     <button
                       type="button"
-                      onClick={() => jumpTo(index)}
-                      aria-current={index === frame.index ? 'step' : undefined}
-                      className={`flex min-h-11 w-full items-center gap-md rounded-md border border-primary bg-secondary px-md py-sm text-left transition-colors duration-200 hover:border-reckon-accent ${FOCUS}`}
+                      onClick={togglePlay}
+                      className={`inline-flex min-h-11 items-center justify-center gap-sm rounded-lg bg-brand-solid px-md py-sm text-sm font-semibold text-black transition-colors duration-200 hover:bg-brand-solid-hover ${FOCUS}`}
                     >
-                      <span className="font-mono text-xs text-quaternary">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-medium text-primary">
-                          {chapter.name}
-                        </span>
-                        <span className="block font-mono text-xs text-quaternary">
-                          {formatClock(chapterDurationMs(chapter) / 1000)}
-                        </span>
-                      </span>
-                      {index === frame.index ? (
-                        <span className="shrink-0 text-xs text-reckon-accent">Now</span>
-                      ) : null}
+                      {playing ? (
+                        <Pause size={15} weight="fill" aria-hidden="true" />
+                      ) : (
+                        <Play size={15} weight="fill" aria-hidden="true" />
+                      )}
+                      {playing ? 'Pause' : 'Play'}
                     </button>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-sm text-xs text-quaternary">
-                Covers hold 1.2 seconds, final frames hold 0.8 seconds. Total runtime{' '}
-                {formatClock(TOTAL_SECONDS)}.
-              </p>
+
+                    <button
+                      type="button"
+                      onClick={replay}
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-md py-sm text-sm font-semibold text-primary transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent ${FOCUS}`}
+                      aria-label="Replay from the start"
+                    >
+                      <ArrowCounterClockwise size={15} weight="bold" aria-hidden="true" />
+                      <span className="hidden sm:inline">Replay</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={toggleSound}
+                      aria-pressed={!soundOn}
+                      aria-label={soundOn ? 'Turn the sound off' : 'Turn the sound on'}
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-md py-sm text-sm font-semibold transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent ${
+                        soundOn ? 'text-primary' : 'text-reckon-accent'
+                      } ${FOCUS}`}
+                    >
+                      {soundOn ? (
+                        <SpeakerHigh size={15} weight="bold" aria-hidden="true" />
+                      ) : (
+                        <SpeakerSlash size={15} weight="bold" aria-hidden="true" />
+                      )}
+                      {soundOn ? 'Sound on' : 'Sound off'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setChaptersOpen((open) => !open)}
+                      aria-label="Show or hide the chapter list"
+                      aria-expanded={chaptersOpen}
+                      aria-controls="film-chapters"
+                      className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-sm rounded-lg border border-primary bg-secondary px-md py-sm text-sm font-semibold text-primary transition-colors duration-200 hover:border-reckon-accent hover:text-reckon-accent ${FOCUS}`}
+                    >
+                      <ListBullets size={15} weight="bold" aria-hidden="true" />
+                      <span className="hidden sm:inline">Chapters</span>
+                    </button>
+                  </div>
+
+                  <p className="hidden text-xs text-quaternary sm:block">
+                    {soundOn
+                      ? 'Narration follows the chapter clock.'
+                      : 'Silent playthrough. The text panel stays on screen.'}
+                  </p>
+                </div>
+              ) : null}
+
+              {chaptersOpen ? (
+                <div id="film-chapters" className="border-t border-primary bg-primary px-lg py-md sm:px-2xl">
+                  <ol className="grid gap-xs sm:grid-cols-2 lg:grid-cols-3">
+                    {CHAPTERS.map((chapter, index) => (
+                      <li key={chapter.id}>
+                        <button
+                          type="button"
+                          onClick={() => seekToChapter(index)}
+                          aria-current={index === frame.index ? 'step' : undefined}
+                          className={`flex min-h-11 w-full items-center gap-md rounded-md border border-primary bg-secondary px-md py-sm text-left transition-colors duration-200 hover:border-reckon-accent ${FOCUS}`}
+                        >
+                          <span className="font-mono text-xs text-quaternary">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-primary">
+                              {chapter.name}
+                            </span>
+                            <span className="block font-mono text-xs text-quaternary">
+                              {formatClock(chapterDurationMs(chapter) / 1000)}
+                            </span>
+                          </span>
+                          {index === frame.index ? (
+                            <span className="shrink-0 text-xs text-reckon-accent">Now</span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="mt-sm text-xs text-quaternary">
+                    Covers hold 1.2 seconds, final frames hold 0.8 seconds. Total runtime{' '}
+                    {formatClock(TOTAL_SECONDS)}.
+                  </p>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+
+          </div>
+
+          <aside
+            aria-label="Narration"
+            className="min-w-0 self-start rounded-2xl border border-primary bg-secondary p-xl sm:p-2xl md:order-1 md:sticky md:top-20"
+          >
+            <div className="flex items-center justify-between gap-sm">
+              <p className="flex items-center gap-sm text-xs font-medium text-reckon-accent">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-reckon-accent" />
+                <span>Narration</span>
+              </p>
+              <span className="font-mono text-xs text-quaternary">
+                {staticMode
+                  ? 'Static'
+                  : `${String(frame.index + 1).padStart(2, '0')} / ${String(CHAPTERS.length).padStart(2, '0')}`}
+              </span>
+            </div>
+
+            {staticMode ? (
+              <div className="mt-lg">
+                <p className="text-sm font-semibold text-primary">Every chapter, written out.</p>
+                <p className="mt-xs text-xs leading-5 text-quaternary">
+                  Reduced motion is on. The first frame is held and the narration is below.
+                </p>
+                <ol className="mt-xl space-y-xl">
+                  {CHAPTERS.map((chapter, index) => (
+                    <li key={chapter.id}>
+                      <p className="font-mono text-xs text-reckon-accent">
+                        {String(index + 1).padStart(2, '0')} /{' '}
+                        {String(CHAPTERS.length).padStart(2, '0')}
+                      </p>
+                      <p className="mt-xs text-sm font-semibold text-primary">{chapter.name}</p>
+                      <p className="mt-xs text-sm leading-6 text-secondary">{chapter.line}</p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : (
+              <div
+                key={frame.index}
+                className="narration-line"
+                aria-live={soundOn && voiceReady ? 'off' : 'polite'}
+                aria-atomic="true"
+              >
+                <h2 className="mt-xl text-lg font-semibold text-primary">{frame.chapter.name}</h2>
+                <p className="mt-md text-md leading-7 text-secondary">{frame.chapter.line}</p>
+              </div>
+            )}
+
+            {!staticMode ? (
+              <>
+                <div className="mt-xl h-1 w-full overflow-hidden rounded-full bg-divider">
+                  <span
+                    className="block h-full w-full origin-left bg-reckon-accent"
+                    style={{ transform: `scaleX(${frame.fill})` }}
+                  />
+                </div>
+                <p className="mt-md text-xs leading-5 text-quaternary">
+                  {!started
+                    ? 'Press play to start the film and the narration.'
+                    : !soundOn
+                      ? 'Sound off. The full narration for this chapter stays on screen.'
+                      : !voiceReady
+                        ? 'Playing silently. The full narration for this chapter stays on screen.'
+                        : playing
+                          ? 'The narration follows the chapter clock.'
+                          : 'Paused on this chapter. Press play to continue.'}
+                </p>
+                <ol className="mt-lg grid grid-cols-6 gap-xs" aria-label="Chapter progress">
+                  {CHAPTERS.map((chapter, index) => (
+                    <li key={chapter.id}>
+                      <button
+                        type="button"
+                        onClick={() => seekToChapter(index)}
+                        aria-label={`Go to chapter ${index + 1}, ${chapter.name}`}
+                        aria-current={index === frame.index ? 'step' : undefined}
+                        className={`block min-h-11 w-full rounded-sm ${FOCUS}`}
+                      >
+                        <span
+                          className={`block h-1 w-full rounded-full ${
+                            index <= frame.index ? 'bg-reckon-accent' : 'bg-divider'
+                          }`}
+                        />
+                        <span
+                          className={`mt-xs block truncate text-left text-xs ${
+                            index === frame.index ? 'text-primary' : 'text-quaternary'
+                          }`}
+                        >
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : null}
+          </aside>
         </div>
 
         <p className="mt-md text-xs leading-5 text-quaternary">
-          A {TOTAL_SECONDS} second reconstruction, captured 31 October 2026. No API is called:
-          every number is a captured fixture, and the only requests are the brand images.
+          A {formatClock(TOTAL_SECONDS)} reconstruction, captured 31 October 2026. Speech runs in
+          your browser. No API is called: every number is a captured fixture, and the only requests
+          are the brand images.
         </p>
-      </Container>
+      </div>
     </section>
   )
 }
