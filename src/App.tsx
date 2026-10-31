@@ -107,6 +107,10 @@ export default function App() {
   const [marketTab, setMarketTab] = useState<'all' | 'sports'>('all')
   const [markets, setMarkets] = useState<Market[]>([])
   const [positions, setPositions] = useState<Position[]>([])
+  // Whether the record came from Walrus Memory or only from the cache.
+  // The API reports this so the page never implies a memory read that failed.
+  const [memoryAvailable, setMemoryAvailable] = useState(true)
+  const [memoryReason, setMemoryReason] = useState<string | null>(null)
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null)
   const [selectedSide, setSelectedSide] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -182,6 +186,8 @@ export default function App() {
       if (res.ok) {
         const data = await res.json()
         setPositions(data.positions || [])
+        setMemoryAvailable(data.memoryAvailable !== false)
+        setMemoryReason(typeof data.memoryReason === 'string' ? data.memoryReason : null)
       }
     } catch (err) {
       console.error(err)
@@ -642,6 +648,18 @@ export default function App() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-2xl">
               <div className="max-w-[680px] space-y-md">
                 <h1 className="heading-4 text-primary">Public analyst record</h1>
+                {!memoryAvailable ? (
+                  <div
+                    role="status"
+                    className="flex gap-md rounded-lg border border-secondary bg-tertiary px-lg py-md"
+                  >
+                    <span className="body-6 text-secondary">
+                      Showing cached positions. Walrus Memory did not answer
+                      {memoryReason ? ` (${memoryReason})` : ''}, so this list may be
+                      incomplete until it does.
+                    </span>
+                  </div>
+                ) : null}
                 <p className="body-3 text-secondary">
                   Every position ever committed, tracked mark to market. No positions are deleted, hidden, or retrospectively adjusted.
                 </p>
