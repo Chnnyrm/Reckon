@@ -277,13 +277,20 @@ async function gradePositions(positions) {
   return Promise.all(
     positions.map(async (pos) => {
       try {
-        // Fetch condition info from Polymarket
-        const url = `https://gamma-api.polymarket.com/markets?conditionId=${pos.marketId}`
+        // Fetch condition info from Polymarket.
+        // The parameter is condition_ids, plural. conditionId singular is silently
+        // IGNORED by this API, which returned an unrelated market and produced
+        // grades computed against the wrong contract.
+        const url = `https://gamma-api.polymarket.com/markets?condition_ids=${encodeURIComponent(pos.marketId)}`
         const r = await fetch(url)
         if (r.ok) {
           const data = await r.json()
-          if (Array.isArray(data) && data[0]) {
-            const m = normalizeMarket(data[0])
+          // Only grade from a market that is actually the one we hold.
+          const match = Array.isArray(data)
+            ? data.find((x) => String(x.conditionId).toLowerCase() === String(pos.marketId).toLowerCase())
+            : null
+          if (match) {
+            const m = normalizeMarket(match)
             const sideIdx = m.outcomes.indexOf(pos.side)
             if (sideIdx !== -1 && m.outcomePrices[sideIdx] !== null && m.outcomePrices[sideIdx] !== undefined) {
               const currentPrice = m.outcomePrices[sideIdx]
