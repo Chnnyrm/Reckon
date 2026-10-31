@@ -200,3 +200,28 @@
   --color-utility-error-600: #f97066; /** Theme-aware error accent text on the 50 tint (alerts). */
   --color-utility-error-700: #fda29b; /** Theme-aware error accent text on the 50 tint (badges). */
 }
+
+/* Reckon brand overrides. Applied after the tatum-design dark theme. */
+[data-theme="dark"], .dark {
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #181818;
+  --color-bg-tertiary: #1F1F1F;
+  --color-border-primary: #272727;
+  --color-border-secondary: #313131;
+  --color-border-tertiary: #313131;
+
+  --color-bg-brand-solid: #FF7A1A;
+  --color-bg-brand-solid-hover: #E86A10;
+  --color-text-brand-primary: #FF7A1A;
+  --color-fg-brand-primary: #FF7A1A;
+  --color-text-primary-on-brand: #000000;
+
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #9B9B9B;
+  --color-text-tertiary: #9B9B9B;
+  --color-text-quaternary: #6B6B6B;
+  --color-text-placeholder: #6B6B6B;
+
+  --color-utility-success-700: #4ADE80;
+  --color-utility-error-700: #F87171;
+}
