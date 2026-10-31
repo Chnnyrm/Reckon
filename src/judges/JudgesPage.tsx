@@ -5,6 +5,7 @@ import { BuildEvidence } from './BuildEvidence'
 import { WalrusSection } from './WalrusSection'
 import { TatumSection } from './TatumSection'
 import { PaymentsSection } from './PaymentsSection'
+import { VerifyStrip } from './VerifyStrip'
 import { JudgesFooter, JudgesHeader, ScrollProgress } from './Chrome'
 import './judges.css'
 
@@ -37,6 +38,7 @@ export default function JudgesPage() {
         <WalrusSection />
         <TatumSection />
         <PaymentsSection />
+        <VerifyStrip />
       </main>
       <JudgesFooter />
     </div>
