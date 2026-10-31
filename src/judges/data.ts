@@ -269,11 +269,4 @@ export const LIMITS: Limit[] = [
     href: LINKS.live,
     linkLabel: 'Open the live app',
   },
-  {
-    title: 'The deployed fork may be private',
-    body:
-      'The parent repository is public and carries the source and the history. The fork that serves the deployment is private at the time of writing. If its link returns 404, use the parent; the live app, the blob and the API are public either way.',
-    href: LINKS.repoMirror,
-    linkLabel: 'Open the parent repository',
-  },
 ]

@@ -58,7 +58,7 @@ export function Hero() {
 
           <p className="mt-4xl max-w-xl text-sm text-secondary">
             No account, no API key, no claim of a win rate. Every claim links to something you
-            can check. The parent repository is public; the deployment fork may need access.
+            can check.
           </p>
         </div>
 

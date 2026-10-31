@@ -15,7 +15,7 @@ const groups = [
   },
   {
     name: 'Deployed fork',
-    proves: 'the deployment remote; may be private',
+    proves: 'the deployment remote',
     href: LINKS.repoDeployed,
   },
   {
@@ -147,9 +147,8 @@ export function VerifyStrip() {
         </div>
 
         <p className="mt-2xl max-w-3xl text-xs leading-5 text-tertiary">
-          The parent repository is public. If the fork link returns 404, the fork is still
-          private; the parent is public and carries the same source and history. The live app,
-          the blob and the API are public either way.
+          If a repository link returns 404, the fork is still private; the parent repository is
+          public.
         </p>
       </Container>
     </section>

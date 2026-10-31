@@ -124,9 +124,8 @@ export function BuildEvidence() {
           <SealCheck size={18} weight="fill" className="mt-0.5 shrink-0 text-reckon-accent" aria-hidden="true" />
           <p className="max-w-3xl text-sm leading-6 text-secondary">
             The build record is public in the same way the forecasting record is: a reader does
-            not have to take the page's word for it. The parent repository is public. The fork
-            that serves the deployment may still be private; if its link returns 404, the source
-            and history are at the parent.
+            not have to take the page's word for it. The parent repository carries the commits
+            and the source.
           </p>
         </div>
       </Container>
