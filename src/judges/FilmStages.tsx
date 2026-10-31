@@ -13,6 +13,7 @@ import {
   AI_COMMIT_COUNT,
   BLOB_ID,
   DEMO_MARKET,
+  MEMORY_ACCOUNT,
   MEMORY_NAMESPACE,
   RECORD_ROWS,
   TATUM_ID,
@@ -41,11 +42,13 @@ function Pointer({
   to,
   travel,
   tap,
+  visible = 1,
 }: {
   from: [number, number]
   to: [number, number]
   travel: number
   tap: number
+  visible?: number
 }) {
   const t = easeOut(travel)
   const x = lerp(from[0], to[0], t)
@@ -58,7 +61,7 @@ function Pointer({
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-30"
       style={{
-        opacity: show ? Math.min(1, travel * 6) : 0,
+        opacity: show ? Math.min(1, travel * 6) * visible : 0,
         transform: `translate(${x}%, ${y}%)`,
       }}
     >
@@ -104,17 +107,25 @@ function SceneHeader({ label, meta }: { label: string; meta: string }) {
 }
 
 function MarketsScene({ progress }: { progress: number }) {
-  const questionIn = easeOut(span(progress, 0.02, 0.24))
+  const questionIn = easeOut(span(progress, 0.02, 0.2))
   const typedCount = Math.round(
-    DEMO_MARKET.question.length * span(progress, 0.06, 0.46)
+    DEMO_MARKET.question.length * span(progress, 0.04, 0.3)
   )
   const typed = DEMO_MARKET.question.slice(0, typedCount)
-  const typing = progress < 0.46
-  const pricesIn = easeOut(span(progress, 0.28, 0.42))
-  const count = easeOut(span(progress, 0.34, 0.7))
-  const volumeIn = easeOut(span(progress, 0.68, 0.82))
-  const pointerTravel = span(progress, 0.32, 0.64)
-  const tap = span(progress, 0.66, 0.84)
+  const typing = progress < 0.3
+  const pricesIn = easeOut(span(progress, 0.16, 0.3))
+  const count = easeOut(span(progress, 0.22, 0.58))
+  const volumeIn = easeOut(span(progress, 0.58, 0.72))
+  const volumeCount = Math.round(6384 * easeOut(span(progress, 0.12, 0.88)))
+  const volume = String(volumeCount).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const firstTravel = span(progress, 0.2, 0.4)
+  const firstTap = span(progress, 0.4, 0.48)
+  const secondTravel = span(progress, 0.54, 0.7)
+  const secondTap = span(progress, 0.7, 0.78)
+  const pulse = 0.55 + 0.45 * Math.abs(Math.sin(progress * Math.PI * 8))
+  const feedOne = easeOut(span(progress, 0.42, 0.5))
+  const feedTwo = easeOut(span(progress, 0.6, 0.68))
+  const feedThree = easeOut(span(progress, 0.8, 0.88))
   const yes = Number.parseInt(DEMO_MARKET.yes, 10)
   const no = Number.parseInt(DEMO_MARKET.no, 10)
 
@@ -124,7 +135,7 @@ function MarketsScene({ progress }: { progress: number }) {
 
       <div
         className="rounded-xl border border-primary bg-secondary"
-        style={enter(easeOut(span(progress, 0, 0.18)))}
+        style={enter(easeOut(span(progress, 0, 0.14)))}
       >
         <div className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs border-b border-primary px-lg py-md">
           <span className="text-xs font-medium text-secondary">Will Olivia Rodrigo appear?</span>
@@ -148,31 +159,60 @@ function MarketsScene({ progress }: { progress: number }) {
             <PriceTile
               label="Yes"
               value={`${Math.round(yes * count)}c`}
-              active={tap > 0.05}
+              active={firstTap > 0.05}
               style={{ opacity: pricesIn, transform: `translateY(${(1 - pricesIn) * 8}px)` }}
             />
             <PriceTile
               label="No"
               value={`${Math.round(no * count)}c`}
+              active={secondTap > 0.05}
               style={{ opacity: pricesIn, transform: `translateY(${(1 - pricesIn) * 8}px)` }}
             />
             <Pointer
               from={[86, 116]}
               to={[25, 50]}
-              travel={pointerTravel}
-              tap={tap}
+              travel={firstTravel}
+              tap={firstTap}
+              visible={1 - span(progress, 0.51, 0.54)}
+            />
+            <Pointer
+              from={[25, 50]}
+              to={[72, 50]}
+              travel={secondTravel}
+              tap={secondTap}
+              visible={span(progress, 0.51, 0.54)}
             />
           </div>
 
           <div className="mt-lg flex flex-wrap items-center justify-between gap-md border-t border-primary pt-md">
             <p className="text-xs text-quaternary" style={{ opacity: volumeIn }}>
-              24h vol <span className="font-medium text-secondary">{DEMO_MARKET.volume}</span>
+              24h vol <span className="font-medium text-secondary">${volume}</span>
             </p>
             <p className="text-xs text-quaternary" style={{ opacity: pricesIn }}>
               Yes {DEMO_MARKET.yes} / No {DEMO_MARKET.no}
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-md gap-y-sm text-xs">
+        <span className="inline-flex items-center gap-xs text-quaternary">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-reckon-accent"
+            style={{ opacity: pulse }}
+          />
+          Feed open
+        </span>
+        <span className="text-quaternary" style={{ opacity: feedOne }}>
+          quote received
+        </span>
+        <span className="text-quaternary" style={{ opacity: feedTwo }}>
+          price read
+        </span>
+        <span className="text-quaternary" style={{ opacity: feedThree }}>
+          no order placed
+        </span>
       </div>
 
       <p className="text-xs leading-5 text-tertiary">
@@ -208,16 +248,41 @@ function PriceTile({
 
 function PositionScene({ progress }: { progress: number }) {
   const row = RECORD_ROWS[0]
-  const cardIn = easeOut(span(progress, 0, 0.16))
-  const pointerTravel = span(progress, 0.08, 0.4)
-  const tap = span(progress, 0.42, 0.6)
-  const selected = progress >= 0.42
-  const selectedIn = easeOut(span(progress, 0.42, 0.52))
-  const confirmation = easeOut(span(progress, 0.56, 0.7))
-  const press = tap > 0 && tap < 1 ? 1 - tap : 0
+  const entry = Number.parseFloat(row.entry)
+  const cardIn = easeOut(span(progress, 0, 0.12))
+  const entryCount = easeOut(span(progress, 0.06, 0.34))
+  const entryValue = entryCount > 0.999 ? row.entry : `${(entry * entryCount).toFixed(1)}c`
+  const firstTravel = span(progress, 0.1, 0.26)
+  const firstTap = span(progress, 0.26, 0.34)
+  const selected = progress >= 0.26
+  const selectedIn = easeOut(span(progress, 0.26, 0.34))
+  const secondTravel = span(progress, 0.46, 0.62)
+  const secondTap = span(progress, 0.62, 0.7)
+  const confirmed = progress >= 0.62
+  const confirmation = easeOut(span(progress, 0.7, 0.84))
+  const lockRule = easeOut(span(progress, 0.82, 0.98))
+  const press = firstTap > 0 && firstTap < 1 ? 1 - firstTap : 0
+  const pressTwo = secondTap > 0 && secondTap < 1 ? 1 - secondTap : 0
 
   return (
-    <div className="flex h-full flex-col justify-center gap-lg p-lg sm:p-2xl">
+    <div className="relative flex h-full flex-col justify-center gap-lg p-lg sm:p-2xl">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-30">
+        <Pointer
+          from={[88, 92]}
+          to={[25, 44]}
+          travel={firstTravel}
+          tap={firstTap}
+          visible={1 - span(progress, 0.43, 0.46)}
+        />
+        <Pointer
+          from={[25, 44]}
+          to={[50, 72]}
+          travel={secondTravel}
+          tap={secondTap}
+          visible={span(progress, 0.43, 0.46)}
+        />
+      </div>
+
       <SceneHeader label="Position / new" meta="Captured" />
 
       <div
@@ -230,7 +295,7 @@ function PositionScene({ progress }: { progress: number }) {
         </div>
         <p className="mt-sm text-sm font-medium leading-5 text-primary">{row.question}</p>
 
-        <div className="relative mt-lg grid grid-cols-2 gap-md">
+        <div className="mt-lg grid grid-cols-2 gap-md">
           <div
             className={`rounded-lg border p-lg ${
               selected ? 'border-reckon-accent bg-reckon-accent/10' : 'border-primary bg-tertiary'
@@ -248,39 +313,56 @@ function PositionScene({ progress }: { progress: number }) {
                 Selected
               </span>
             </div>
-            <p className="mt-xs text-heading-xs font-semibold text-primary">{row.entry}</p>
+            <p className="mt-xs text-heading-xs font-semibold text-primary">{entryValue}</p>
           </div>
 
           <div className="rounded-lg border border-primary bg-tertiary p-lg">
             <span className="text-xs text-quaternary">FURIA</span>
             <p className="mt-xs text-sm font-medium text-quaternary">Not in this capture</p>
           </div>
-
-          <Pointer from={[86, 118]} to={[25, 50]} travel={pointerTravel} tap={tap} />
         </div>
 
-        <div className="mt-lg flex items-center justify-between border-t border-primary pt-md text-sm">
+        <div
+          className={`mt-md flex items-center justify-between gap-md rounded-lg border px-lg py-md ${
+            confirmed
+              ? 'border-reckon-accent/60 bg-reckon-accent/10'
+              : 'border-primary bg-tertiary'
+          }`}
+          style={{ transform: `scale(${1 + pressTwo * 0.02})` }}
+        >
+          <span className="flex min-w-0 items-center gap-sm">
+            {confirmed ? (
+              <CheckCircle
+                size={16}
+                weight="fill"
+                className="shrink-0 text-reckon-accent"
+                aria-hidden="true"
+              />
+            ) : null}
+            <span className={`text-sm font-semibold ${confirmed ? 'text-primary' : 'text-secondary'}`}>
+              {confirmed ? `Position captured at ${row.entry}` : 'Confirm position'}
+            </span>
+          </span>
+          <span className="shrink-0 font-mono text-xs text-quaternary">{row.side}</span>
+        </div>
+
+        <div className="mt-md flex items-center justify-between border-t border-primary pt-md text-sm">
           <span className="text-secondary">Entry price</span>
-          <span className="font-semibold text-primary">{row.entry}</span>
+          <span className="font-semibold text-primary">{entryValue}</span>
         </div>
         <p className="mt-xs text-xs text-quaternary">
           The price is fixed when the position is taken.
         </p>
       </div>
 
-      <div
-        className="flex items-center gap-md rounded-lg border border-reckon-accent/40 bg-secondary px-lg py-md"
-        style={enter(confirmation, 6)}
-      >
-        <CheckCircle size={18} weight="fill" className="shrink-0 text-reckon-accent" aria-hidden="true" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-primary">
-            Position captured at {row.entry}
-          </p>
-          <p className="mt-xs text-xs text-quaternary">
-            {row.side} is locked with this entry price at commit time.
-          </p>
-        </div>
+      <div className="flex items-center gap-md" style={{ opacity: confirmation }}>
+        <span className="h-px flex-1 overflow-hidden bg-divider">
+          <span
+            className="block h-full w-full origin-left bg-reckon-accent"
+            style={{ transform: `scaleX(${lockRule})` }}
+          />
+        </span>
+        <span className="shrink-0 text-xs text-quaternary">write next</span>
       </div>
 
       <p className="text-xs leading-5 text-tertiary">
@@ -293,11 +375,24 @@ function PositionScene({ progress }: { progress: number }) {
 function WalrusScene({ progress }: { progress: number }) {
   const appIn = easeOut(span(progress, 0, 0.12))
   const storeIn = easeOut(span(progress, 0.02, 0.14))
-  const travel = easeInOut(span(progress, 0.16, 0.56))
-  const spinner = progress < 0.72
-  const committed = easeOut(span(progress, 0.72, 0.86))
-  const blobIn = easeOut(span(progress, 0.76, 0.9))
-  const tick = easeOut(span(progress, 0.74, 0.86))
+  const outbound = easeInOut(span(progress, 0.08, 0.32))
+  const middle = easeInOut(span(progress, 0.36, 0.6))
+  const returning = easeInOut(span(progress, 0.88, 0.99))
+  const committed = progress >= 0.86
+  const commitIn = easeOut(span(progress, 0.86, 0.93))
+  const blobIn = easeOut(span(progress, 0.84, 0.92))
+  const accountIn = easeOut(span(progress, 0.9, 0.97))
+  const stepOne = easeOut(span(progress, 0.28, 0.36))
+  const stepTwo = easeOut(span(progress, 0.8, 0.87))
+  const stepThree = easeOut(span(progress, 0.91, 0.97))
+  const phase =
+    progress < 0.34
+      ? 'Posting'
+      : progress < 0.62
+        ? 'Encrypting'
+        : progress < 0.86
+          ? 'Committing'
+          : 'Committed'
 
   return (
     <div className="flex h-full flex-col justify-center gap-lg p-lg sm:p-2xl">
@@ -324,7 +419,28 @@ function WalrusScene({ progress }: { progress: number }) {
           <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-primary" />
           <div
             className="absolute inset-0 z-10"
-            style={{ transform: `translateX(${travel * 100}%)`, opacity: travel > 0.02 ? 1 : 0 }}
+            style={{
+              transform: `translateX(${outbound * 100}%)`,
+              opacity: outbound > 0.01 && outbound < 0.999 ? 1 : 0,
+            }}
+          >
+            <span className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-reckon-accent" />
+          </div>
+          <div
+            className="absolute inset-0 z-10"
+            style={{
+              transform: `translateX(${middle * 100}%)`,
+              opacity: middle > 0.01 && middle < 0.999 ? 0.75 : 0,
+            }}
+          >
+            <span className="absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-reckon-accent" />
+          </div>
+          <div
+            className="absolute inset-0 z-10"
+            style={{
+              transform: `translateX(${(1 - returning) * 100}%)`,
+              opacity: returning > 0.01 && returning < 0.999 ? 1 : 0,
+            }}
           >
             <span className="absolute left-0 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-reckon-accent" />
           </div>
@@ -333,7 +449,14 @@ function WalrusScene({ progress }: { progress: number }) {
             weight="bold"
             aria-hidden="true"
             className="absolute right-0 top-1/2 z-20 -translate-y-1/2 text-reckon-accent"
-            style={{ opacity: easeOut(span(progress, 0.56, 0.68)) }}
+            style={{ opacity: easeOut(span(progress, 0.3, 0.4)) }}
+          />
+          <CaretRight
+            size={10}
+            weight="bold"
+            aria-hidden="true"
+            className="absolute left-0 top-1/2 z-20 -translate-y-1/2 rotate-180 text-reckon-accent"
+            style={{ opacity: easeOut(span(progress, 0.86, 0.92)) }}
           />
         </div>
 
@@ -348,22 +471,22 @@ function WalrusScene({ progress }: { progress: number }) {
           <p className="mt-xs truncate font-mono text-xs text-quaternary">namespace {MEMORY_NAMESPACE}</p>
 
           <div className="mt-md flex items-center gap-xs">
-            {spinner ? (
+            {!committed ? (
               <>
                 <CircleNotch
                   size={14}
                   weight="bold"
                   aria-hidden="true"
                   className="shrink-0 text-reckon-accent"
-                  style={{ transform: `rotate(${progress * 1440}deg)` }}
+                  style={{ transform: `rotate(${progress * 2520}deg)` }}
                 />
-                <span className="text-xs text-secondary">Committing</span>
+                <span className="text-xs text-secondary">{phase}</span>
               </>
             ) : (
               <>
                 <span
                   className="flex shrink-0 items-center justify-center text-reckon-accent"
-                  style={{ opacity: tick, transform: `scale(${0.6 + tick * 0.4})` }}
+                  style={{ opacity: commitIn, transform: `scale(${0.6 + commitIn * 0.4})` }}
                 >
                   <CheckCircle size={14} weight="fill" aria-hidden="true" />
                 </span>
@@ -378,10 +501,34 @@ function WalrusScene({ progress }: { progress: number }) {
           >
             {BLOB_ID}
           </p>
-          <p className="mt-auto pt-md text-xs text-quaternary" style={{ opacity: committed }}>
+          <p
+            className="mt-md break-all font-mono text-xs leading-4 text-quaternary"
+            style={{ opacity: accountIn }}
+            title={MEMORY_ACCOUNT}
+          >
+            on Sui {MEMORY_ACCOUNT.slice(0, 8)}...{MEMORY_ACCOUNT.slice(-6)}
+          </p>
+          <p className="mt-auto pt-md text-xs text-quaternary" style={{ opacity: commitIn }}>
             recall is the source of truth
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-lg gap-y-xs text-xs">
+        {[
+          { label: 'job accepted', at: stepOne },
+          { label: 'blob committed', at: stepTwo },
+          { label: 'recall ready', at: stepThree },
+        ].map((step) => (
+          <span
+            key={step.label}
+            className="inline-flex items-center gap-xs text-quaternary"
+            style={{ opacity: step.at }}
+          >
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-reckon-accent" />
+            {step.label}
+          </span>
+        ))}
       </div>
 
       <p className="text-xs leading-5 text-tertiary">
@@ -393,18 +540,28 @@ function WalrusScene({ progress }: { progress: number }) {
 }
 
 function RecordScene({ progress }: { progress: number }) {
-  const footer = easeOut(span(progress, 0.76, 0.88))
+  const footer = easeOut(span(progress, 0.88, 0.97))
+  const scan = span(progress, 0.52, 1)
+  const pulse = 0.55 + 0.45 * Math.abs(Math.sin(progress * Math.PI * 10))
 
   return (
     <div className="flex h-full flex-col justify-center gap-md p-lg sm:p-2xl">
       <SceneHeader label="Record / mark to market" meta="3 positions" />
 
-      <div className="overflow-hidden rounded-xl border border-primary bg-secondary divide-y divide-primary">
+      <div className="relative overflow-hidden rounded-xl border border-primary bg-secondary divide-y divide-primary">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 z-10 h-px bg-reckon-accent"
+          style={{
+            top: `${scan * 100}%`,
+            opacity: scan > 0.001 && scan < 1 ? 0.35 : 0,
+          }}
+        />
         {RECORD_ROWS.map((row, index) => {
-          const appearStart = 0.04 + index * 0.14
-          const countStart = 0.1 + index * 0.14
+          const appearStart = 0.03 + index * 0.06
+          const countStart = 0.08 + index * 0.13
           const appear = easeOut(span(progress, appearStart, appearStart + 0.12))
-          const count = easeOut(span(progress, countStart, countStart + 0.28))
+          const count = easeOut(span(progress, countStart, countStart + 0.55))
           const up = row.direction === 'up'
           const absolute = Math.abs(Number.parseFloat(row.change.replace('%', '').replace('+', '')))
           const value =
@@ -456,7 +613,15 @@ function RecordScene({ progress }: { progress: number }) {
         })}
       </div>
 
-      <p className="text-xs leading-5 text-tertiary" style={{ opacity: footer }}>
+      <p
+        className="flex items-center gap-sm text-xs leading-5 text-tertiary"
+        style={{ opacity: footer }}
+      >
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-reckon-accent"
+          style={{ opacity: pulse }}
+        />
         These markets have not resolved. This is movement, not win rate.
       </p>
     </div>
@@ -474,30 +639,32 @@ type Leg = {
 }
 
 const AGENT_LEGS: Leg[] = [
-  { id: 'request', from: 0, to: 1, label: 'request', start: 0.02, end: 0.16 },
-  { id: 'challenge', from: 1, to: 0, label: '402', start: 0.2, end: 0.34 },
-  { id: 'transfer', from: 0, to: 2, label: '0.01 USDC', start: 0.38, end: 0.55 },
-  { id: 'digest', from: 0, to: 1, label: 'digest', start: 0.59, end: 0.73, brand: 'tatum' },
-  { id: 'verdict', from: 1, to: 0, label: 'verdict', start: 0.78, end: 0.92 },
+  { id: 'request', from: 0, to: 1, label: 'request', start: 0.02, end: 0.12 },
+  { id: 'challenge', from: 1, to: 0, label: '402', start: 0.15, end: 0.26 },
+  { id: 'transfer', from: 0, to: 2, label: '0.01 USDC', start: 0.3, end: 0.45 },
+  { id: 'digest', from: 0, to: 1, label: 'digest', start: 0.49, end: 0.61, brand: 'tatum' },
+  { id: 'verdict', from: 1, to: 0, label: 'verdict', start: 0.66, end: 0.78 },
 ]
 
 const COLUMN_CENTERS = [16.7, 50, 83.3]
 
 function AgentScene({ progress }: { progress: number }) {
-  const drop = easeOut(span(progress, 0.38, 0.56))
-  const paid = progress > 0.5
+  const drop = easeOut(span(progress, 0.3, 0.5))
+  const paid = progress >= 0.45
   const phase =
-    progress < 0.18
+    progress < 0.15
       ? 0
-      : progress < 0.36
+      : progress < 0.3
         ? 1
-        : progress < 0.57
+        : progress < 0.49
           ? 2
-          : progress < 0.76
+          : progress < 0.66
             ? 3
             : 4
-  const phaseStart = [0, 0.18, 0.36, 0.57, 0.76][phase]
-  const panelIn = easeOut(span(progress, phaseStart, phaseStart + 0.07))
+  const phaseStart = [0, 0.15, 0.3, 0.49, 0.66][phase]
+  const panelIn = easeOut(span(progress, phaseStart, phaseStart + 0.06))
+  const verified = easeOut(span(progress, 0.8, 0.9))
+  const receipt = easeOut(span(progress, 0.88, 0.96))
 
   return (
     <div className="flex h-full flex-col justify-center gap-md p-lg sm:p-2xl">
@@ -686,9 +853,20 @@ function AgentScene({ progress }: { progress: number }) {
               className="mt-0.5 shrink-0 text-reckon-accent"
               aria-hidden="true"
             />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-primary">200 verdict returned</p>
-              <p className="mt-xs text-xs text-secondary">One digest buys one call.</p>
+              <p className="mt-xs text-xs text-secondary">
+                Reckon verified the digest on chain before it answered.
+              </p>
+              <span className="mt-sm block h-px w-full overflow-hidden bg-divider">
+                <span
+                  className="block h-full w-full origin-left bg-reckon-accent"
+                  style={{ transform: `scaleX(${verified})` }}
+                />
+              </span>
+              <p className="mt-xs text-xs text-quaternary" style={{ opacity: receipt }}>
+                one digest, one call
+              </p>
             </div>
           </div>
         ) : null}
@@ -707,13 +885,15 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 function BuilderScene({ progress }: { progress: number }) {
-  const headerIn = easeOut(span(progress, 0, 0.1))
-  const generated = span(progress, 0.1, 0.32)
-  const extended = span(progress, 0.54, 0.74)
-  const panelOne = easeOut(span(progress, 0.32, 0.42))
-  const panelTwo = easeOut(span(progress, 0.7, 0.8))
-  const factOne = [0.34, 0.41, 0.48]
+  const headerIn = easeOut(span(progress, 0, 0.08))
+  const generated = span(progress, 0.06, 0.34)
+  const extended = span(progress, 0.48, 0.74)
+  const panelOne = easeOut(span(progress, 0.3, 0.4))
+  const panelTwo = easeOut(span(progress, 0.68, 0.78))
+  const factOne = [0.32, 0.39, 0.46]
   const factTwo = [0.72, 0.79, 0.86]
+  const pulseGenerated = progress > 0.8 ? (progress - 0.8) / 0.2 : null
+  const pulseExtended = progress > 0.88 ? (progress - 0.88) / 0.12 : null
 
   return (
     <div className="flex h-full flex-col justify-center gap-md p-lg sm:p-2xl">
@@ -742,14 +922,16 @@ function BuilderScene({ progress }: { progress: number }) {
           reverse={false}
           label="generated"
           top={0}
-          drawn={progress >= 0.1}
+          drawn={progress >= 0.06}
+          pulse={pulseGenerated}
         />
         <FlowLane
           progress={extended}
           reverse
           label="extended by hand"
           top={32}
-          drawn={progress >= 0.54}
+          drawn={progress >= 0.48}
+          pulse={pulseExtended}
         />
       </div>
 
@@ -792,12 +974,14 @@ function FlowLane({
   label,
   top,
   drawn,
+  pulse = null,
 }: {
   progress: number
   reverse: boolean
   label: string
   top: number
   drawn: boolean
+  pulse?: number | null
 }) {
   const from = reverse ? 75 : 25
   const to = reverse ? 25 : 75
@@ -834,6 +1018,14 @@ function FlowLane({
         <span
           className="absolute inset-0"
           style={{ transform: `translateX(${lerp(from, to, t)}%)` }}
+        >
+          <span className="absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-reckon-accent" />
+        </span>
+      ) : null}
+      {pulse !== null && drawn ? (
+        <span
+          className="absolute inset-0"
+          style={{ transform: `translateX(${lerp(from, to, pulse)}%)` }}
         >
           <span className="absolute left-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-reckon-accent" />
         </span>
