@@ -8,6 +8,7 @@ import { VerifyStrip } from './VerifyStrip'
 import { Limits } from './Limits'
 import { JudgesFooter, JudgesHeader } from './Chrome'
 import { Container } from './ui'
+import { PageIntro } from './PageIntro'
 import './judges.css'
 
 // The film is its own chunk: the page shell, masthead and sections paint
@@ -50,6 +51,7 @@ export default function JudgesPage() {
     <div className="judges-root min-h-screen bg-primary font-sans text-primary selection:bg-reckon-accent/20">
       <JudgesHeader />
       <main id="main">
+        <PageIntro />
         <Suspense fallback={<FilmFallback />}>
           <Film />
         </Suspense>

@@ -24,7 +24,7 @@ const solutionPoints = [
 
 export function Problem() {
   return (
-    <section className="border-b border-primary py-8xl sm:py-9xl" aria-labelledby="problem-title">
+    <section id="what-it-is" className="border-b border-primary py-8xl sm:py-9xl" aria-labelledby="problem-title">
       <Container>
         <SectionHead
           id="problem-title"

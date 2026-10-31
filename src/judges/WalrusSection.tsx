@@ -34,7 +34,7 @@ const flow = [
 
 export function WalrusSection() {
   return (
-    <section id="record" aria-labelledby="record-title" className="border-b border-primary py-8xl sm:py-9xl">
+    <section id="walrus-memory" aria-labelledby="record-title" className="border-b border-primary py-8xl sm:py-9xl">
       <Container>
         <div className="grid gap-4xl lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
           <div>
