@@ -1,14 +1,26 @@
 import express from 'express'
 import fs from 'fs'
-import path from 'path'
-import { rememberPosition, recallPositions } from '../../memory/bridge.js'
+import {
+  rememberPosition,
+  recallPositions,
+  parsePosition,
+  positionsNamespace
+} from '../../memory/bridge.js'
+import { memoryStatus } from '../memory-client.mjs'
 
 const router = express.Router()
 
-// Storage location:
+// Storage: Walrus Memory is the source of truth for positions.
 // Platform note: /data/project is mounted read-only in the preview container.
-// We use /tmp/positions.json so runtime writes succeed, falling back to in-memory if needed.
+// /tmp is wiped on every deploy and is not shared between serverless
+// instances, so the local file is only a cache: it backs the API when a recall
+// fails, and it holds writes whose Walrus commit has not landed yet.
 const POSITIONS_FILE = '/tmp/reckon-positions.json'
+// How long a locally written position is still shown while its blob commits.
+const PENDING_WINDOW_MS = 15 * 60 * 1000
+// The startup recall, so a cold instance answers from Walrus rather than from
+// whatever /tmp happened to keep.
+let startupRecall = null
 
 // Seed three LIVE positions
 const SEED_POSITIONS = [
@@ -41,33 +53,103 @@ const SEED_POSITIONS = [
   }
 ]
 
-let inMemoryPositions = [...SEED_POSITIONS]
+let inMemoryPositions = SEED_POSITIONS.map((p) => ({ ...p }))
 
-function loadPositions() {
+// The cache file may legitimately hold an empty list: that is what "everything
+// was forgotten" looks like, and it must not resurrect the seeds.
+function readCacheFile() {
   try {
-    if (fs.existsSync(POSITIONS_FILE)) {
-      const data = fs.readFileSync(POSITIONS_FILE, 'utf-8')
-      const parsed = JSON.parse(data)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
-      }
-    }
+    if (!fs.existsSync(POSITIONS_FILE)) return null
+    const parsed = JSON.parse(fs.readFileSync(POSITIONS_FILE, 'utf-8'))
+    if (Array.isArray(parsed)) return parsed
   } catch (err) {
-    console.error('Error reading positions file:', err)
+    console.error('Error reading positions cache:', err.message)
   }
-  return inMemoryPositions
+  return null
 }
 
-function savePositions(positions) {
+function writeCacheFile(positions) {
   inMemoryPositions = positions
   try {
     fs.writeFileSync(POSITIONS_FILE, JSON.stringify(positions, null, 2), 'utf-8')
     return true
   } catch (err) {
-    console.error('Error writing positions file:', err)
+    // A read-only or full /tmp must not lose the write: memory still has it,
+    // and Walrus is the durable copy.
+    console.error('Error writing positions cache:', err.message)
     return false
   }
 }
+
+// Turn recalled sentences back into position records. Only text written by
+// encodePosition carries the machine-readable tail; anything else is ignored.
+function parseRecalledPositions(memories) {
+  const byId = new Map()
+  for (const memory of memories || []) {
+    const record = parsePosition(memory && memory.text)
+    if (!record) continue
+    const existing = byId.get(record.id)
+    if (!existing || (record.openedAt || '') > (existing.openedAt || '')) {
+      byId.set(record.id, {
+        ...record,
+        source: 'LIVE',
+        onWalrus: true,
+        memorySource: 'walrus',
+        blobId: (memory && memory.blobId) || null
+      })
+    }
+  }
+  return [...byId.values()].sort((a, b) => (b.openedAt || '').localeCompare(a.openedAt || ''))
+}
+
+// Rebuild the list from Walrus. The cached file is a fallback, never the
+// authority: when recall succeeds, whatever is not on Walrus and not a recent
+// local write is dropped, so deleted positions cannot live on in /tmp.
+async function loadPositions() {
+  const cached = readCacheFile() ?? inMemoryPositions
+  const recall = await recallPositions()
+
+  if (!recall.ok) {
+    // Nothing can be confirmed to be on Walrus right now, so nothing is
+    // presented as if it were, even though the cache remembers older flags.
+    return {
+      positions: cached.map((p) => ({ ...p, onWalrus: false, memorySource: 'cache' })),
+      memoryAvailable: false,
+      memorySource: 'cache',
+      memoryReason: recall.reason || 'recall_failed'
+    }
+  }
+
+  const remote = parseRecalledPositions(recall.memories)
+  const remoteIds = new Set(remote.map((p) => p.id))
+  const now = Date.now()
+  const pending = cached
+    .filter((p) => {
+      if (!p || remoteIds.has(p.id)) return false
+      // Seeds and legacy rows have no savedAt: they were never written here.
+      if (typeof p.savedAt !== 'number') return false
+      return now - p.savedAt < PENDING_WINDOW_MS
+    })
+    .map((p) => ({ ...p, onWalrus: false, memorySource: 'pending' }))
+
+  const positions = [...pending, ...remote]
+  writeCacheFile(positions)
+
+  return {
+    positions,
+    memoryAvailable: true,
+    // Never claim Walrus holds positions when recall returned none.
+    memorySource: remote.length > 0 ? 'walrus' : pending.length > 0 ? 'pending' : 'empty',
+    recalledCount: remote.length,
+    droppedCount: recall.droppedCount || 0
+  }
+}
+
+// Kick off the startup recall without blocking module load.
+startupRecall = loadPositions().catch((err) => {
+  console.error('Startup recall failed:', err && err.message ? err.message : err)
+  return null
+})
 
 // Helper to safely parse JSON strings
 function safeJsonParse(val, fallback) {
@@ -162,52 +244,73 @@ router.get('/markets', async (req, res) => {
   }
 })
 
-// GET /api/positions
-// Returns all positions with current mark to market performance
-router.get('/positions', async (req, res) => {
-  const stored = loadPositions()
-
-  // Try to grade each position by fetching latest prices
-  try {
-    const graded = await Promise.all(
-      stored.map(async (pos) => {
-        try {
-          // Fetch condition info from Polymarket
-          const url = `https://gamma-api.polymarket.com/markets?conditionId=${pos.marketId}`
-          const r = await fetch(url)
-          if (r.ok) {
-            const data = await r.json()
-            if (Array.isArray(data) && data[0]) {
-              const m = normalizeMarket(data[0])
-              const sideIdx = m.outcomes.indexOf(pos.side)
-              if (sideIdx !== -1 && m.outcomePrices[sideIdx] !== null && m.outcomePrices[sideIdx] !== undefined) {
-                const currentPrice = m.outcomePrices[sideIdx]
-                const changePct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1))
-                return {
-                  ...pos,
-                  currentPrice,
-                  changePct
-                }
+// Mark each position to market from the latest Polymarket price.
+async function gradePositions(positions) {
+  return Promise.all(
+    positions.map(async (pos) => {
+      try {
+        // Fetch condition info from Polymarket
+        const url = `https://gamma-api.polymarket.com/markets?conditionId=${pos.marketId}`
+        const r = await fetch(url)
+        if (r.ok) {
+          const data = await r.json()
+          if (Array.isArray(data) && data[0]) {
+            const m = normalizeMarket(data[0])
+            const sideIdx = m.outcomes.indexOf(pos.side)
+            if (sideIdx !== -1 && m.outcomePrices[sideIdx] !== null && m.outcomePrices[sideIdx] !== undefined) {
+              const currentPrice = m.outcomePrices[sideIdx]
+              const changePct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1))
+              return {
+                ...pos,
+                currentPrice,
+                changePct
               }
             }
           }
-        } catch (e) {
-          // Fall through to null grading
         }
-        return {
-          ...pos,
-          currentPrice: null,
-          changePct: null
-        }
-      })
-    )
-
-    res.json({ positions: graded })
-  } catch (err) {
-    res.json({
-      positions: stored.map((p) => ({ ...p, currentPrice: null, changePct: null }))
+      } catch (e) {
+        // Fall through to null grading
+      }
+      return {
+        ...pos,
+        currentPrice: null,
+        changePct: null
+      }
     })
+  )
+}
+
+// GET /api/positions
+// Rebuilt from Walrus Memory on every read. memoryAvailable:false means the
+// list came from the local cache because recall failed, and the client must
+// not describe it as Walrus-held.
+router.get('/positions', async (req, res) => {
+  let state
+  try {
+    state = await loadPositions()
+  } catch (err) {
+    state = {
+      positions: readCacheFile() ?? inMemoryPositions,
+      memoryAvailable: false,
+      memorySource: 'cache',
+      memoryReason: err && err.message ? err.message : 'recall_failed'
+    }
   }
+
+  let graded
+  try {
+    graded = await gradePositions(state.positions)
+  } catch (err) {
+    graded = state.positions.map((p) => ({ ...p, currentPrice: null, changePct: null }))
+  }
+
+  res.json({
+    positions: graded,
+    memoryAvailable: state.memoryAvailable,
+    memorySource: state.memorySource,
+    ...(state.memoryReason ? { memoryReason: state.memoryReason } : {}),
+    ...(state.droppedCount > 0 ? { memoryDropped: state.droppedCount } : {})
+  })
 })
 
 // POST /api/positions
@@ -221,54 +324,59 @@ router.post('/positions', async (req, res) => {
   }
 
   const openedAt = new Date().toISOString()
+  const id = `pos-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
 
-  // Attempt to write to Walrus Memory
+  // Write to Walrus first, so the id embedded in the sentence is the id the
+  // app keeps. rememberPosition never throws and resolves { ok, reason }.
   let walrusResult = { ok: false, reason: 'unattempted' }
   try {
     walrusResult = await rememberPosition({
+      id,
+      marketId,
       question,
       side,
       entryPrice,
       openedAt
     })
   } catch (err) {
-    walrusResult = { ok: false, reason: err.message }
+    walrusResult = { ok: false, reason: err && err.message ? err.message : 'unknown' }
   }
 
-  const positions = loadPositions()
+  const acceptedByWalrus = Boolean(walrusResult && walrusResult.ok)
   const newPos = {
-    id: `pos-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    id,
     marketId,
     question,
     side,
     entryPrice,
     openedAt,
     source,
-    onWalrus: Boolean(walrusResult && walrusResult.ok)
+    // Accepted by the relayer. The blob is committed in the background, so it
+    // only shows up in recall (and onWalrus: true) once that lands.
+    onWalrus: acceptedByWalrus,
+    memorySource: acceptedByWalrus ? 'pending' : 'local',
+    savedAt: Date.now()
   }
 
-  positions.unshift(newPos)
-  const saved = savePositions(positions)
-
-  if (!saved) {
-    return res.status(500).json({
-      error: 'That position could not be saved. The record file is not writable. Try again.'
-    })
-  }
+  const existing = readCacheFile() ?? inMemoryPositions
+  const positions = [newPos, ...existing.filter((p) => p && p.id !== newPos.id)]
+  const cached = writeCacheFile(positions)
 
   res.status(201).json({
     position: newPos,
-    walrus: walrusResult
+    walrus: walrusResult,
+    memoryAvailable: acceptedByWalrus,
+    cached
   })
 })
 
 // GET /api/memory/status
 router.get('/memory/status', (req, res) => {
-  const prefix = process.env.MEMWAL_NAMESPACE_PREFIX || 'default'
-  const namespace = `${prefix}-reckon`
+  const status = memoryStatus()
   res.json({
-    namespace,
-    configured: Boolean(process.env.MEMWAL_ACCOUNT_ID && process.env.MEMWAL_PRIVATE_KEY)
+    namespace: positionsNamespace(),
+    configured: status.configured,
+    server: status.server
   })
 })
 
