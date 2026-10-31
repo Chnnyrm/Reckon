@@ -492,7 +492,7 @@ export default function App() {
             <section className="rounded-xl border border-secondary bg-primary p-2xl shadow-xs space-y-3xl">
               <div className="space-y-sm">
                 <div className="flex flex-wrap items-center gap-sm caption-4 text-quaternary">
-                  <span className="inline-flex items-center rounded border border-utility-gray-200 bg-utility-gray-50 px-sm py-xxs font-mono text-[11px] text-utility-gray-700">
+                  <span className="inline-flex items-center rounded border border-secondary bg-secondary px-sm py-xxs font-mono text-[11px] text-secondary">
                     ID: {selectedMarket.conditionId.slice(0, 10)}...
                   </span>
                   <span>•</span>
@@ -713,10 +713,10 @@ export default function App() {
                         {/* Left Info */}
                         <div className="space-y-xs flex-1 min-w-0 pr-md">
                           <div className="flex items-center gap-sm caption-5 text-quaternary">
-                            <span className="inline-flex items-center rounded border border-utility-gray-200 bg-utility-gray-50 px-sm py-xxs font-mono text-[11px] text-utility-gray-700">
+                            <span className="inline-flex items-center rounded border border-secondary bg-secondary px-sm py-xxs font-mono text-[11px] text-secondary">
                               {pos.source}
                             </span>
-                            <span className="inline-flex items-center rounded border border-utility-gray-200 bg-utility-gray-50 px-sm py-xxs font-mono text-[11px] text-utility-gray-700">
+                            <span className="inline-flex items-center rounded border border-secondary bg-secondary px-sm py-xxs font-mono text-[11px] text-secondary">
                               {pos.onWalrus ? 'on Walrus' : 'local only'}
                             </span>
                             <span>•</span>
