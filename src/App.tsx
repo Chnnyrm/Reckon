@@ -9,71 +9,9 @@ import {
   CheckCircle,
   ArrowLeft
 } from '@phosphor-icons/react'
+import { Logo } from './components/Logo'
 
 export interface Market {
-  question: string
-  slug: string
-  conditionId: string
-  outcomes: string[]
-  outcomePrices: (number | null)[]
-  volume24hr: number
-  endDate: string
-  image: string
-}
-
-export interface Position {
-  id: string
-  marketId: string
-  question: string
-  side: string
-  entryPrice: number
-  currentPrice: number | null
-  changePct: number | null
-  openedAt: string
-  source: 'LIVE' | 'BACKFILLED'
-}
-
-export function Logo({ size = 32 }: { size?: number }) {
-  const markRadius = size >= 32 ? 6 : 4
-  const fontSize = Math.round(size * 0.62)
-  return (
-    <div className="flex items-center select-none" style={{ gap: '12px' }}>
-      <div
-        className="flex items-center justify-center shrink-0"
-        style={{
-          width: `${size}px`,
-          height: `${size}px`,
-          backgroundColor: '#FF7A1A',
-          borderRadius: `${markRadius}px`
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: `${fontSize}px`,
-            color: '#000000',
-            lineHeight: 1
-          }}
-        >
-          R
-        </span>
-      </div>
-      <span
-        style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontWeight: 700,
-          letterSpacing: '-0.03em',
-          color: '#FFFFFF',
-          fontSize: '20px',
-          lineHeight: 1
-        }}
-      >
-        Reckon
-      </span>
-    </div>
-  )
-}
 
 function Sparkline({ isUp }: { isUp: boolean | null }) {
   if (isUp === null) {
