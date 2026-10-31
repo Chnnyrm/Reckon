@@ -7,7 +7,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const judgesDir = join(root, 'src', 'judges')
@@ -16,6 +16,7 @@ const sources = Object.fromEntries(
   files.map((file) => [file, readFileSync(join(judgesDir, file), 'utf8')])
 )
 const all = Object.values(sources).join('\n')
+const filmModel = await import(pathToFileURL(join(judgesDir, 'film.ts')).href)
 
 test('the verified facts are the ones in the page', () => {
   const facts = [
@@ -160,4 +161,101 @@ test('the route is isolated from the product app', () => {
   assert.match(main, /path === '\/judges'/)
   assert.match(main, /lazy\(\(\) => import\('\.\/judges\/JudgesPage\.tsx'\)\)/)
   assert.match(main, /<App \/>/)
+})
+
+
+test('the narration is paced to fit each chapter', () => {
+  const { CHAPTERS, TOTAL_SECONDS, chapterDurationMs } = filmModel
+  assert.equal(CHAPTERS.length, 6)
+  assert.ok(TOTAL_SECONDS >= 150 && TOTAL_SECONDS <= 170, `runtime ${TOTAL_SECONDS}s is outside 150 to 170`)
+
+  let total = 0
+  for (const chapter of CHAPTERS) {
+    const words = chapter.line.trim().split(/\s+/).length
+    assert.ok(words >= 40 && words <= 55, `${chapter.id} has ${words} spoken words`)
+    const sentences = (chapter.line.match(/[.!?](\s|$)/g) ?? []).length
+    assert.ok(sentences >= 2 && sentences <= 3, `${chapter.id} has ${sentences} sentences`)
+
+    // No identifier or long number is spoken. These belong in the visible
+    // text, where a reader can copy them.
+    assert.doesNotMatch(chapter.line, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+
+    const budget = (chapter.line.length / 13) * 1000 + 1500
+    assert.ok(
+      chapterDurationMs(chapter) >= budget,
+      `${chapter.id} is shorter than its spoken line plus breathing room`
+    )
+    total += chapterDurationMs(chapter)
+  }
+  assert.equal(Math.round(total / 1000), TOTAL_SECONDS)
+})
+
+test('the header and its chips are above the player and target real sections', () => {
+  const page = sources['JudgesPage.tsx']
+  const intro = sources['PageIntro.tsx']
+
+  assert.ok(page.indexOf('<PageIntro') < page.indexOf('<Suspense'), 'the intro must sit above the film')
+  for (const label of [
+    'What it is',
+    'Walrus Memory',
+    'Tatum',
+    'Agent payments',
+    'Tatum AI Builder',
+  ]) {
+    assert.ok(intro.includes(label), `missing chip: ${label}`)
+  }
+
+  for (const [file, id] of [
+    ['Problem.tsx', 'what-it-is'],
+    ['WalrusSection.tsx', 'walrus-memory'],
+    ['TatumSection.tsx', 'tatum'],
+    ['PaymentsSection.tsx', 'payments'],
+    ['BuildEvidence.tsx', 'build'],
+  ]) {
+    assert.match(sources[file], new RegExp(`id="${id}"`), `${file} lacks the ${id} target`)
+  }
+
+  assert.match(intro, /scrollIntoView/)
+  assert.match(intro, /min-h-11/)
+})
+
+test('the player is capped and the narration panel is beside it', () => {
+  const film = sources['Film.tsx']
+
+  assert.match(film, /max-w-\[1100px\]/, 'the player is not capped')
+  assert.match(film, /md:grid-cols-\[320px_minmax\(0,1fr\)\]/)
+  assert.match(film, /lg:grid-cols-\[340px_minmax\(0,1fr\)\]/)
+  assert.match(film, /md:order-1/)
+  assert.match(film, /md:order-2/)
+  assert.match(film, /<aside/)
+  assert.ok(film.indexOf('<aside') > film.indexOf('min-w-0 md:order-2'))
+  assert.match(film, /min-h-11/)
+  assert.match(film, /min-h-\[30rem\]/)
+})
+
+test('the voiceover follows the browser speech brief', () => {
+  const narration = sources['narration.ts']
+  const film = sources['Film.tsx']
+
+  assert.match(narration, /SPEECH_RATE = 0\.92/)
+  assert.match(narration, /SPEECH_PITCH = 1\.02/)
+  assert.match(narration, /SPEECH_VOLUME = 1/)
+  assert.match(narration, /voiceschanged/)
+  assert.match(narration, /VOICE_TIMEOUT_MS/)
+  for (const hint of ['female', 'samantha', 'zira', 'aria', 'jenny', 'google uk english female']) {
+    assert.ok(narration.includes(`'${hint}'`), `missing voice hint: ${hint}`)
+  }
+  assert.match(narration, /en-gb/)
+  assert.match(narration, /en-us/)
+  assert.match(narration, /startsWith\('en'\)/)
+
+  assert.match(film, /narrator\.speak\(CHAPTERS\[frame\.index\]\.line\)/)
+  assert.match(film, /narrator\.cancel\(\)/)
+  assert.match(film, /const \[playing, setPlaying\] = useState\(false\)/)
+  assert.match(film, /const \[started, setStarted\] = useState\(false\)/)
+  assert.match(film, /Play the demo with sound/)
+  assert.match(film, /Watch without sound/)
+  assert.match(film, /Sound off/)
+  assert.match(film, /staticMode/)
+  assert.match(film, /\{!reduced \?/)
 })
