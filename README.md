@@ -9,6 +9,7 @@ cannot be edited after the fact.
 
 Live application: https://reckon-three-beta.vercel.app
 Judges briefing: https://reckon-three-beta.vercel.app/judges
+Build notes: https://dev.to/chnnyrm/i-asked-an-ai-builder-to-build-a-forecasting-app-in-one-pass-3dke
 
 ## The problem
 
