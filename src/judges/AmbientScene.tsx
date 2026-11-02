@@ -21,11 +21,14 @@ import {
   WebGLRenderer,
 } from 'three'
 
-const COUNT = 1300
+const COUNT = 1400
 const FIELD_X = 14
 const FIELD_Y = 10
 const FIELD_Z = 8
 
+// Vertex shader with realistic photographic optical depth-of-field simulation:
+// points expand into optical circle-of-confusion bokeh discs based on distance
+// from the camera focal plane.
 const vertexShader = `
   uniform float uTime;
   uniform float uScroll;
@@ -38,6 +41,7 @@ const vertexShader = `
   varying vec3 vColor;
   varying float vAlpha;
   varying float vShape;
+  varying float vBokeh;
 
   void main() {
     vec3 p = position;
@@ -48,35 +52,63 @@ const vertexShader = `
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = aSize * uPixelRatio * (12.0 / max(2.0, -mv.z));
 
-    float depthFade = smoothstep(20.0, 3.0, -mv.z);
-    vAlpha = (0.2 + 0.8 * depthFade) * 0.45;
+    // Optical focal plane at z = -6.5 (macro camera lens simulation)
+    float focalPlane = -6.5;
+    float distToFocus = abs(mv.z - focalPlane);
+    float coc = smoothstep(0.2, 3.8, distToFocus);
+    vBokeh = coc;
+
+    // Realistic optical expansion: out of focus points form larger bokeh discs
+    float opticalSize = aSize * (1.0 + coc * 2.6);
+    gl_PointSize = opticalSize * uPixelRatio * (13.5 / max(2.0, -mv.z));
+
+    float depthFade = smoothstep(18.0, 2.8, -mv.z);
+    float intensity = 1.0 / (1.0 + coc * 1.4);
+    vAlpha = (0.24 + 0.76 * depthFade) * intensity * 0.52;
     vColor = aColor;
     vShape = aShape;
   }
 `
 
+// Fragment shader modeling physical camera aperture optics:
+// circular bokeh discs with bright perimeter rims and subtle chromatic fringing.
 const fragmentShader = `
   varying vec3 vColor;
   varying float vAlpha;
   varying float vShape;
+  varying float vBokeh;
 
   void main() {
     vec2 c = gl_PointCoord - 0.5;
+    float r = length(c);
+    if (r > 0.5) discard;
+
     float alpha = 0.0;
+    vec3 col = vColor;
 
     if (vShape > 0.82) {
-      float bar = step(abs(c.x), 0.09) * step(abs(c.y), 0.5);
+      float bar = step(abs(c.x), 0.08) * step(abs(c.y), 0.48);
       alpha = bar * vAlpha;
     } else {
-      float d = length(c);
-      if (d > 0.5) discard;
-      alpha = smoothstep(0.5, 0.08, d) * vAlpha;
+      // 1-to-1 realistic photographic lens bokeh aperture:
+      // sharp outer perimeter ring characteristic of real fast lenses,
+      // with a smooth translucent core.
+      float rim = smoothstep(0.35, 0.48, r) * (0.8 + 0.45 * vBokeh);
+      float core = (1.0 - smoothstep(0.0, 0.46, r) * 0.4);
+      float edge = smoothstep(0.5, 0.42, r);
+      float disc = (core + rim) * edge;
+
+      if (r > 0.4 && vBokeh > 0.3) {
+        col.r *= 1.06;
+        col.b *= 0.95;
+      }
+
+      alpha = disc * vAlpha;
     }
 
-    if (alpha < 0.01) discard;
-    gl_FragColor = vec4(vColor, alpha);
+    if (alpha < 0.005) discard;
+    gl_FragColor = vec4(col, alpha);
   }
 `
 
@@ -119,8 +151,9 @@ export default function AmbientScene({ paused = false }: { paused?: boolean }) {
     const shapes = new Float32Array(COUNT)
 
     const orange = [1.0, 0.478, 0.102]
-    const white = [0.86, 0.87, 0.9]
-    const gray = [0.48, 0.49, 0.52]
+    const warmAmber = [1.0, 0.64, 0.32]
+    const white = [0.92, 0.93, 0.96]
+    const gray = [0.52, 0.54, 0.58]
 
     for (let i = 0; i < COUNT; i += 1) {
       positions[i * 3] = (Math.random() - 0.5) * FIELD_X
@@ -128,15 +161,15 @@ export default function AmbientScene({ paused = false }: { paused?: boolean }) {
       positions[i * 3 + 2] = (Math.random() - 0.5) * FIELD_Z - 1.5
 
       const roll = Math.random()
-      const tint = roll < 0.1 ? orange : roll < 0.26 ? gray : white
+      const tint = roll < 0.1 ? orange : roll < 0.18 ? warmAmber : roll < 0.32 ? gray : white
       colors[i * 3] = tint[0]
       colors[i * 3 + 1] = tint[1]
       colors[i * 3 + 2] = tint[2]
 
-      sizes[i] = roll < 0.1 ? 2.0 + Math.random() * 1.4 : 0.75 + Math.random() * 1.15
+      sizes[i] = roll < 0.1 ? 2.2 + Math.random() * 1.5 : 0.8 + Math.random() * 1.2
       speeds[i] = 0.05 + Math.random() * 0.16
       phases[i] = Math.random() * Math.PI * 2
-      shapes[i] = Math.random() < 0.16 ? 1 : 0
+      shapes[i] = Math.random() < 0.15 ? 1 : 0
     }
 
     const geometry = new BufferGeometry()
