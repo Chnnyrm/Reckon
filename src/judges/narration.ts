@@ -70,7 +70,8 @@ export function isRejectedVoice(voice: SpeechSynthesisVoice): boolean {
   const { name, uri } = textFor(voice)
   if (matchesMarker(name, REJECTED_VOICE_NAMES)) return true
   if (matchesMarker(uri, REJECTED_VOICE_NAMES)) return true
-  if (!voice.localService && matchesMarker(name, NETWORK_VOICE_MARKERS)) return true
+  const isNatural = name.toLowerCase().includes('natural') || name.toLowerCase().includes('neural')
+  if (!isNatural && !voice.localService && matchesMarker(name, NETWORK_VOICE_MARKERS)) return true
   return false
 }
 
@@ -163,17 +164,29 @@ export class Narrator {
       return false
     }
 
-    let utterance: SpeechSynthesisUtterance
-    try {
-      utterance = new SpeechSynthesisUtterance(line)
-    } catch {
-      return false
+    // Observe natural punctuation pauses. When multiple sentences exist,
+    // queueing them as individual utterances allows the browser speech engine
+    // to pause, inflect pitch contours, and speak with human cadence.
+    const sentences = line
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    const utterances: SpeechSynthesisUtterance[] = []
+    for (const sentence of sentences) {
+      try {
+        const u = new SpeechSynthesisUtterance(sentence)
+        u.voice = this.voice
+        u.lang = this.voice.lang
+        u.rate = SPEECH_RATE
+        u.pitch = SPEECH_PITCH
+        u.volume = SPEECH_VOLUME
+        utterances.push(u)
+      } catch {
+        // Skip invalid utterance
+      }
     }
-    utterance.voice = this.voice
-    utterance.lang = this.voice.lang
-    utterance.rate = SPEECH_RATE
-    utterance.pitch = SPEECH_PITCH
-    utterance.volume = SPEECH_VOLUME
+    if (utterances.length === 0) return false
 
     this.generation += 1
     const generation = this.generation
@@ -185,7 +198,9 @@ export class Narrator {
     window.setTimeout(() => {
       if (generation !== this.generation) return
       try {
-        synth.speak(utterance)
+        for (const u of utterances) {
+          synth.speak(u)
+        }
       } catch {
         // A browser that refuses speech is a silent film, not a broken one.
       }
