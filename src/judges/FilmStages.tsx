@@ -84,56 +84,119 @@ function PhoneShell({
 }) {
   return (
     <div
-      className="relative mx-auto flex h-full w-full max-w-[370px] flex-col overflow-hidden rounded-[26px] border border-primary bg-primary shadow-2xl transition-transform duration-500 ease-out"
+      className="relative mx-auto flex h-full w-full max-w-[360px] flex-col transition-transform duration-500 ease-out"
       style={{
         transform: `scale(${scale})`,
         transformOrigin: origin,
       }}
     >
-      {/* Top Phone Status Bar */}
-      <div className="flex h-7 shrink-0 items-center justify-between border-b border-primary/40 bg-secondary/80 px-md text-[10px] text-quaternary backdrop-blur-sm">
-        <span className="font-mono text-secondary">9:41</span>
-        <div className="h-2.5 w-16 rounded-full bg-tertiary" />
-        <div className="flex items-center gap-xs">
-          <span className="h-1.5 w-1.5 rounded-full bg-reckon-accent" />
-          <span className="font-mono text-[9px]">5G</span>
-        </div>
-      </div>
+      {/* Physical Hardware Buttons on Chassis */}
+      {/* Action Button (left) */}
+      <span aria-hidden="true" className="absolute -left-[5px] top-16 h-4 w-[4px] rounded-l-xs border-t border-white/20 bg-[#2b2b2e] shadow-xs" />
+      {/* Volume Up (left) */}
+      <span aria-hidden="true" className="absolute -left-[5px] top-24 h-9 w-[4px] rounded-l-xs border-t border-white/20 bg-[#2b2b2e] shadow-xs" />
+      {/* Volume Down (left) */}
+      <span aria-hidden="true" className="absolute -left-[5px] top-36 h-9 w-[4px] rounded-l-xs border-t border-white/20 bg-[#2b2b2e] shadow-xs" />
+      {/* Power / Side Button (right) */}
+      <span aria-hidden="true" className="absolute -right-[5px] top-28 h-12 w-[4px] rounded-r-xs border-t border-white/20 bg-[#2b2b2e] shadow-xs" />
 
-      {/* Actual App Header from App.tsx */}
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-primary bg-primary px-md">
-        <div className="flex items-center gap-xs">
-          <LogoMark size={18} />
-          <span className="text-xs font-semibold text-primary">Reckon</span>
-        </div>
-        <div className="flex items-center gap-xs rounded-lg border border-primary bg-tertiary p-xxs text-[10px]">
-          <span
-            className={`rounded-md px-sm py-xxs font-medium ${
-              activeTab === 'markets'
-                ? 'border border-primary bg-primary text-primary'
-                : 'text-secondary'
-            }`}
-          >
-            Markets
-          </span>
-          <span
-            className={`flex items-center gap-xs rounded-md px-sm py-xxs font-medium ${
-              activeTab === 'record'
-                ? 'border border-primary bg-primary text-primary'
-                : 'text-secondary'
-            }`}
-          >
-            Record
-            <span className="rounded-full bg-reckon-accent/20 px-xs py-none text-[9px] text-reckon-accent">
-              3
-            </span>
-          </span>
-        </div>
-      </div>
+      {/* Flagship Titanium Chassis Rim */}
+      <div className="relative flex h-full w-full flex-col rounded-[44px] bg-[#18181a] p-[3px] shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_25px_60px_-15px_rgba(0,0,0,0.9),inset_0_1px_1px_rgba(255,255,255,0.25)]">
+        {/* Antenna band notches */}
+        <span aria-hidden="true" className="absolute left-6 top-0 h-[3px] w-1 bg-[#2a2a2c]" />
+        <span aria-hidden="true" className="absolute right-6 top-0 h-[3px] w-1 bg-[#2a2a2c]" />
+        <span aria-hidden="true" className="absolute bottom-0 left-6 h-[3px] w-1 bg-[#2a2a2c]" />
+        <span aria-hidden="true" className="absolute bottom-0 right-6 h-[3px] w-1 bg-[#2a2a2c]" />
 
-      {/* Screen Body */}
-      <div className="relative flex-1 overflow-hidden p-md">
-        {children}
+        {/* OLED Screen Bezel & Display Viewport */}
+        <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[41px] border border-black/90 bg-primary">
+          {/* Top Speaker Earpiece Receiver Slit */}
+          <div aria-hidden="true" className="absolute left-1/2 top-[2px] z-40 h-[2.5px] w-12 -translate-x-1/2 rounded-full border-b border-white/10 bg-[#0a0a0c]" />
+
+          {/* Front Glass Specular Sheen */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[41px]">
+            <div className="pointer-events-none absolute -left-[50%] -top-[50%] h-[200%] w-[200%] rotate-45 bg-white/[0.015]" />
+          </div>
+
+          {/* Top Phone Status Bar */}
+          <div className="relative z-30 flex h-7 shrink-0 items-center justify-between bg-primary px-lg pt-1">
+            {/* Clock */}
+            <span className="font-mono text-[11px] font-medium text-primary">9:41</span>
+
+            {/* Hyper-realistic Dynamic Island / Camera System */}
+            <div className="flex h-[19px] w-[84px] items-center justify-between rounded-full bg-black px-2 shadow-[inset_0_0_3px_rgba(255,255,255,0.18)]">
+              {/* Front Camera Lens with Optical Cyan AR Reflection */}
+              <div className="relative flex h-2.5 w-2.5 items-center justify-center rounded-full border border-[#14283b] bg-[#07111c]">
+                <span className="h-0.5 w-0.5 rounded-full bg-[#38bdf8]/80 shadow-[0_0_2px_#38bdf8]" />
+              </div>
+              {/* Sensor / Light dot */}
+              <span className="h-1 w-1 rounded-full bg-[#121214]" />
+            </div>
+
+            {/* Authentic Cellular, WiFi, Battery Indicators */}
+            <div className="flex items-center gap-xs text-primary">
+              {/* 4-bar Cellular Signal */}
+              <svg width="13" height="9" viewBox="0 0 13 9" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="6.5" width="2" height="2.5" rx="0.4" />
+                <rect x="3.5" y="4.5" width="2" height="4.5" rx="0.4" />
+                <rect x="7" y="2.5" width="2" height="6.5" rx="0.4" />
+                <rect x="10.5" y="0.5" width="2" height="8.5" rx="0.4" />
+              </svg>
+              {/* WiFi Wave */}
+              <svg width="12" height="9" viewBox="0 0 12 9" fill="currentColor" aria-hidden="true">
+                <path d="M6 8.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM3.5 5.5a3.5 3.5 0 0 1 5 0 .6.6 0 1 0 .8-.8 4.7 4.7 0 0 0-6.6 0 .6.6 0 1 0 .8.8zM1 3a7 7 0 0 1 10 0 .6.6 0 0 0 .8-.8 8.2 8.2 0 0 0-11.6 0 .6.6 0 0 0 .8.8z" />
+              </svg>
+              {/* Battery Indicator with Terminal Cap */}
+              <div className="flex items-center">
+                <div className="flex h-2.5 w-5 items-center rounded-xs border border-primary/90 p-[1px]">
+                  <div className="h-full w-3 rounded-xxs bg-primary" />
+                </div>
+                <div className="h-1 w-[1.5px] rounded-r-xxs bg-primary/90" />
+              </div>
+            </div>
+          </div>
+
+          {/* Actual App Header from App.tsx */}
+          <div className="flex h-11 shrink-0 items-center justify-between border-b border-primary bg-primary px-md">
+            <div className="flex items-center gap-xs">
+              <LogoMark size={18} />
+              <span className="text-xs font-semibold text-primary">Reckon</span>
+            </div>
+            <div className="flex items-center gap-xs rounded-lg border border-primary bg-tertiary p-xxs text-[10px]">
+              <span
+                className={`rounded-md px-sm py-xxs font-medium ${
+                  activeTab === 'markets'
+                    ? 'border border-primary bg-primary text-primary'
+                    : 'text-secondary'
+                }`}
+              >
+                Markets
+              </span>
+              <span
+                className={`flex items-center gap-xs rounded-md px-sm py-xxs font-medium ${
+                  activeTab === 'record'
+                    ? 'border border-primary bg-primary text-primary'
+                    : 'text-secondary'
+                }`}
+              >
+                Record
+                <span className="rounded-full bg-reckon-accent/20 px-xs py-none text-[9px] text-reckon-accent">
+                  3
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Screen Body Viewport */}
+          <div className="relative flex-1 overflow-hidden p-md">
+            {children}
+          </div>
+
+          {/* Bottom Glossy Home Indicator Bar */}
+          <div className="flex h-4 shrink-0 items-center justify-center bg-primary pb-1">
+            <div className="h-1 w-28 rounded-full bg-primary/30" />
+          </div>
+        </div>
       </div>
     </div>
   )

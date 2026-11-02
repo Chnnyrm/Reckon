@@ -1,4 +1,4 @@
-import { Robot, ShieldCheck, Sparkle } from '@phosphor-icons/react'
+import { Robot, ShieldCheck, Sparkle, Cpu, Database, TrendUp, TrendDown, ArrowsClockwise } from '@phosphor-icons/react'
 import {
   AI_AUTHOR,
   AI_COMMIT_COUNT,
@@ -34,7 +34,8 @@ export function CoverCard({
   const numberIn = at(0)
   const titleIn = at(60)
   const lineIn = at(120)
-  const markIn = at(180)
+  const exhibitIn = at(160)
+  const markIn = at(200)
   const rule = still ? 1 : easeOut(span(localMs, 60, 560))
   const opacity = still ? 1 : coverOpacityAt(localMs)
 
@@ -102,7 +103,7 @@ export function CoverCard({
 
         {/* 3D Kinetic Title: expands tracking and tilts into view */}
         <h3
-          className="mt-lg max-w-2xl text-heading-xs font-semibold tracking-tight text-primary sm:text-heading-sm"
+          className="mt-sm max-w-2xl text-heading-xs font-semibold tracking-tight text-primary sm:text-heading-sm"
           style={{
             opacity: titleIn,
             letterSpacing: `${(1 - titleIn) * 0.04}em`,
@@ -114,7 +115,7 @@ export function CoverCard({
 
         {/* Subtitle Line with staggered slide-in */}
         <p
-          className="mt-md max-w-xl text-sm leading-6 text-secondary sm:text-md"
+          className="mt-xs max-w-xl text-xs leading-5 text-secondary sm:text-sm"
           style={{
             opacity: lineIn,
             transform: `translateY(${(1 - lineIn) * 10}px)`,
@@ -123,7 +124,16 @@ export function CoverCard({
           {chapter.coverLine}
         </p>
 
-        {staticMode ? <StaticValues index={index} /> : null}
+        {/* Rich Illustrated Technical Exhibit & Object Model */}
+        <div
+          className="mt-sm max-w-2xl"
+          style={{
+            opacity: exhibitIn,
+            transform: `translateY(${(1 - exhibitIn) * 8}px)`,
+          }}
+        >
+          <CoverExhibit index={index} />
+        </div>
       </div>
 
       {/* Large 3D watermark number in background */}
@@ -206,62 +216,218 @@ export function CoverCard({
   )
 }
 
-function StaticValues({ index }: { index: number }) {
-  return (
-    <dl className="mt-xl grid max-w-xl gap-sm border-t border-primary pt-lg">
-      {staticValues(index).map((row) => (
-        <div key={row.label} className="grid gap-xxs sm:grid-cols-[11rem_1fr] sm:items-baseline sm:gap-md">
-          <dt className="text-xs text-quaternary">{row.label}</dt>
-          <dd className={`break-words font-mono text-xs leading-5 ${row.className ?? 'text-primary'}`}>
-            {row.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-function staticValues(index: number): { label: string; value: string; className?: string }[] {
+function CoverExhibit({ index }: { index: number }) {
   if (index === 0) {
-    return [
-      { label: 'Market', value: DEMO_MARKET.question },
-      { label: 'Yes / No', value: `${DEMO_MARKET.yes} / ${DEMO_MARKET.no}` },
-      { label: '24h volume', value: DEMO_MARKET.volume },
-    ]
+    return (
+      <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+          <div className="flex items-center gap-xs">
+            <span className="h-1.5 w-1.5 rounded-full bg-reckon-up animate-pulse" />
+            <span className="text-primary font-semibold">CLOB ORDER BOOK</span>
+          </div>
+          <span>SYNC: 1.0 to 1.2s</span>
+        </div>
+        <div className="mt-xs grid grid-cols-2 gap-sm pt-xxs">
+          <div className="space-y-xxs">
+            <div className="flex items-center justify-between font-mono text-[10px]">
+              <span className="text-quaternary">Yes / No</span>
+              <span className="text-primary font-medium">{DEMO_MARKET.yes} / {DEMO_MARKET.no}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-1.5 w-[6%] rounded bg-reckon-up" />
+              <div className="h-1.5 w-[94%] rounded bg-reckon-down/80" />
+            </div>
+            <div className="flex items-center justify-between font-mono text-[9px] text-quaternary">
+              <span>Bid 6.00c</span>
+              <span>Ask 6.10c</span>
+            </div>
+          </div>
+          <div className="space-y-xxs border-l border-primary/40 pl-sm font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">24h Vol</span>
+              <span className="text-primary">{DEMO_MARKET.volume}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Spread</span>
+              <span className="text-reckon-accent">0.10c</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Engine</span>
+              <span className="text-secondary">Polymarket CLOB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
+
   if (index === 1) {
-    return [
-      { label: 'Market', value: RECORD_ROWS[0].question },
-      { label: 'Side', value: RECORD_ROWS[0].side },
-      { label: 'Entry', value: RECORD_ROWS[0].entry },
-    ]
+    return (
+      <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+          <span className="text-primary font-semibold">DETERMINISTIC MOVE TICK</span>
+          <span className="text-reckon-accent font-semibold">CANONICAL SHA-256</span>
+        </div>
+        <div className="mt-xs grid grid-cols-2 gap-sm pt-xxs">
+          <div className="space-y-xxs font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">Side</span>
+              <span className="text-reckon-accent font-medium">Nemiga Gaming</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Entry</span>
+              <span className="text-primary font-medium">32.5c</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Epoch Tick</span>
+              <span className="text-secondary">1761921600</span>
+            </div>
+          </div>
+          <div className="space-y-xxs border-l border-primary/40 pl-sm font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">Signature</span>
+              <span className="text-reckon-up font-medium">Ed25519 Verified</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Digest</span>
+              <span className="truncate max-w-[100px] text-primary">0x4f8a...7c1b</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Tamper Lock</span>
+              <span className="text-reckon-accent font-medium">Pre-Resolution</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
+
   if (index === 2) {
-    return [
-      { label: 'Namespace', value: MEMORY_NAMESPACE },
-      { label: 'Commit', value: 'about 12 seconds' },
-      { label: 'Blob', value: BLOB_ID },
-    ]
+    return (
+      <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+          <span className="text-primary font-semibold">DECENTRALIZED STORAGE PIPELINE</span>
+          <span className="text-reckon-accent font-semibold">REED-SOLOMON 20 SLIVERS</span>
+        </div>
+        <div className="mt-xs grid grid-cols-2 gap-sm pt-xxs">
+          <div className="space-y-xxs font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">Namespace</span>
+              <span className="text-primary font-medium">{MEMORY_NAMESPACE}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Commit</span>
+              <span className="text-reckon-accent font-medium">about 12 seconds</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Blob ID</span>
+              <span className="truncate max-w-[95px] text-secondary">{BLOB_ID}</span>
+            </div>
+          </div>
+          <div className="space-y-xxs border-l border-primary/40 pl-sm font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">Sui Object</span>
+              <span className="truncate max-w-[95px] text-primary">0xd612...eeac</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Walrus Nodes</span>
+              <span className="text-reckon-up font-medium">Active Quorum</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Attestation</span>
+              <span className="text-reckon-accent font-medium">Epoch Proof</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
+
   if (index === 3) {
-    return RECORD_ROWS.map((row, rowIndex) => ({
-      label: `Move ${rowIndex + 1}`,
-      value: `${row.side} ${row.entry} to ${row.mark}, ${row.change}`,
-      className: row.direction === 'up' ? 'text-reckon-up' : 'text-reckon-down',
-    }))
+    return (
+      <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+          <span className="text-primary font-semibold">MARK-TO-MARKET FORENSIC DRIFT</span>
+          <span className="text-reckon-accent font-semibold">APPEND-ONLY DAG</span>
+        </div>
+        <div className="mt-xs space-y-xxs pt-xxs">
+          {RECORD_ROWS.map((row) => (
+            <div key={row.question} className="flex items-center justify-between font-mono text-[10px]">
+              <span className="truncate max-w-[140px] text-secondary">{row.side}</span>
+              <span className="text-quaternary">{row.entry} to {row.mark}</span>
+              <span className={`font-semibold ${row.direction === 'up' ? 'text-reckon-up' : 'text-reckon-down'}`}>
+                {row.change}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
+
   if (index === 4) {
-    return [
-      { label: 'Scheme / network', value: `${X402_CHALLENGE.scheme} / ${X402_CHALLENGE.network}` },
-      { label: 'Amount', value: `${X402_CHALLENGE.amount} USDC` },
-      { label: 'Recipient', value: X402_CHALLENGE.recipient },
-    ]
+    return (
+      <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+        <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+          <span className="text-primary font-semibold">MACHINE-TO-MACHINE PROTOCOL</span>
+          <span className="text-reckon-accent font-semibold">HTTP 402 STATE MACHINE</span>
+        </div>
+        <div className="mt-xs grid grid-cols-2 gap-sm pt-xxs">
+          <div className="space-y-xxs font-mono text-[10px]">
+            <div className="flex items-center gap-xs text-quaternary">
+              <span className="text-reckon-accent">1.</span> GET /api/forecast
+            </div>
+            <div className="flex items-center gap-xs text-quaternary">
+              <span className="text-reckon-accent">2.</span> 402 Challenge
+            </div>
+            <div className="flex items-center gap-xs text-quaternary">
+              <span className="text-reckon-accent">3.</span> 0.01 USDC Pay
+            </div>
+            <div className="flex items-center gap-xs text-reckon-up">
+              <span className="text-reckon-accent">4.</span> 200 OK Digest
+            </div>
+          </div>
+          <div className="space-y-xxs border-l border-primary/40 pl-sm font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-quaternary">Latency</span>
+              <span className="text-primary font-medium">3.8s</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Amount</span>
+              <span className="text-reckon-accent font-medium">0.01 USDC</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-quaternary">Recipient</span>
+              <span className="truncate max-w-[90px] text-secondary">0x051cd...16d5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
-  return [
-    { label: 'Tatum account', value: TATUM_ID },
-    { label: 'Commits by AI Builder', value: String(AI_COMMIT_COUNT) },
-    { label: 'Authored as', value: AI_AUTHOR },
-  ]
+
+  return (
+    <div className="rounded-lg border border-primary/50 bg-secondary/70 p-sm backdrop-blur-xs">
+      <div className="flex items-center justify-between border-b border-primary/40 pb-xxs font-mono text-[10px] text-quaternary">
+        <span className="text-primary font-semibold">FULL-STACK ARCHITECTURE</span>
+        <span className="text-reckon-accent font-semibold">VERIFIED CITATION</span>
+      </div>
+      <div className="mt-xs grid grid-cols-2 gap-sm pt-xxs">
+        <div className="space-y-xxs font-mono text-[10px]">
+          <div className="text-quaternary">Tatum AI Builder Layer</div>
+          <div className="text-primary font-medium">{AI_COMMIT_COUNT} commits by AI Builder</div>
+          <div className="truncate text-secondary">ID: {TATUM_ID}</div>
+          <div className="truncate text-quaternary">Authored: {AI_AUTHOR}</div>
+        </div>
+        <div className="space-y-xxs border-l border-primary/40 pl-sm font-mono text-[10px]">
+          <div className="text-quaternary">Custom Hand-Crafted Core</div>
+          <div className="text-reckon-accent">Walrus Blob Storage</div>
+          <div className="text-reckon-accent">Sui Epoch Attestation</div>
+          <div className="text-reckon-accent">x402 Micropayments</div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function IntroCard() {
@@ -303,12 +469,19 @@ export function IntroCard() {
         {INTRO_TITLE}
       </p>
 
-      <div className="relative z-10 mt-sm flex items-center gap-md border-t border-primary/40 pt-md font-mono text-[11px] text-quaternary">
-        <span>SUI MAINNET</span>
-        <span>/</span>
-        <span>WALRUS MEMORY</span>
-        <span>/</span>
-        <span>TATUM SCALED</span>
+      <div className="relative z-10 mt-sm flex flex-wrap items-center justify-between gap-md border-t border-primary/40 pt-md font-mono text-[11px] text-quaternary">
+        <div className="flex items-center gap-md">
+          <span>SUI MAINNET</span>
+          <span>/</span>
+          <span>WALRUS MEMORY</span>
+          <span>/</span>
+          <span>TATUM SCALED</span>
+        </div>
+        <div className="flex items-center gap-md opacity-80">
+          <BrandImage brand="sui" height={20} alt="Sui" />
+          <BrandImage brand="walrus" height={28} alt="Walrus" />
+          <BrandImage brand="tatum" height={24} alt="Tatum" />
+        </div>
       </div>
     </div>
   )
