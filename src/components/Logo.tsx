@@ -1,8 +1,17 @@
 import React from 'react'
 
-export function LogoMark({ size = 32 }: { size?: number }) {
+export function LogoMark({
+  size = 32,
+  className,
+}: {
+  size?: number
+  // The mark is used inline in the judges film, where it needs a centring
+  // utility. Accepting no className meant the caller could not position it.
+  className?: string
+}) {
   return (
     <div
+      className={className}
       style={{
         width: `${size}px`,
         height: `${size}px`,
