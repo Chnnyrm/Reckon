@@ -290,44 +290,39 @@ router.get('/markets', async (req, res) => {
   }
 })
 
-// Mark each position to market from the latest Polymarket price.
+// Mark each position to market from Tatum's prediction market detail endpoint.
+// The condition id is the path segment, so no query filter is involved. The
+// returned market is still checked against the stored id: if Tatum answers
+// with anything else, the position is graded unavailable rather than against
+// the wrong contract.
 async function gradePositions(positions) {
   return Promise.all(
     positions.map(async (pos) => {
+      const ungraded = { ...pos, currentPrice: null, changePct: null }
       try {
-        // Fetch condition info from Polymarket.
-        // The parameter is condition_ids, plural. conditionId singular is silently
-        // IGNORED by this API, which returned an unrelated market and produced
-        // grades computed against the wrong contract.
-        const url = `https://gamma-api.polymarket.com/markets?condition_ids=${encodeURIComponent(pos.marketId)}`
-        const r = await fetch(url)
-        if (r.ok) {
-          const data = await r.json()
-          // Only grade from a market that is actually the one we hold.
-          const match = Array.isArray(data)
-            ? data.find((x) => String(x.conditionId).toLowerCase() === String(pos.marketId).toLowerCase())
-            : null
-          if (match) {
-            const m = normalizeMarket(match)
-            const sideIdx = m.outcomes.indexOf(pos.side)
-            if (sideIdx !== -1 && m.outcomePrices[sideIdx] !== null && m.outcomePrices[sideIdx] !== undefined) {
-              const currentPrice = m.outcomePrices[sideIdx]
-              const changePct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1))
-              return {
-                ...pos,
-                currentPrice,
-                changePct
-              }
-            }
-          }
+        const market = await getMarketById(pos.marketId)
+        if (!market) return ungraded
+        if (market.conditionId.toLowerCase() !== String(pos.marketId).toLowerCase()) return ungraded
+
+        // Sides were stored from the old feed; match them without case so a
+        // stored "Yes" still finds Tatum's "Yes" after normalization.
+        const sideIdx = market.outcomes.findIndex(
+          (outcome) => outcome.toLowerCase() === String(pos.side).toLowerCase()
+        )
+        const currentPrice = sideIdx === -1 ? null : market.outcomePrices[sideIdx]
+        if (currentPrice === null || currentPrice === undefined) return ungraded
+        if (typeof pos.entryPrice !== 'number' || pos.entryPrice === 0) return ungraded
+
+        const changePct = Number((((currentPrice - pos.entryPrice) / pos.entryPrice) * 100).toFixed(1))
+        return {
+          ...pos,
+          currentPrice,
+          changePct
         }
-      } catch (e) {
-        // Fall through to null grading
-      }
-      return {
-        ...pos,
-        currentPrice: null,
-        changePct: null
+      } catch {
+        // A network error, a missing key or a non-JSON answer is unavailable,
+        // never a number.
+        return ungraded
       }
     })
   )
