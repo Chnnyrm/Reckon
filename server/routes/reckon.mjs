@@ -7,6 +7,7 @@ import {
   positionsNamespace
 } from '../../memory/bridge.js'
 import { memoryStatus } from '../memory-client.mjs'
+import { getMarketById, listMarkets } from '../tatum-markets.mjs'
 
 const router = express.Router()
 
@@ -16,6 +17,10 @@ const router = express.Router()
 // instances, so the local file is only a cache: it backs the API when a recall
 // fails, and it holds writes whose Walrus commit has not landed yet.
 const POSITIONS_FILE = '/tmp/reckon-positions.json'
+// The last market list Tatum served, per tab. It is a fallback only: a stale
+// list is served with marketsAvailable:false rather than an empty list that
+// would read as "there are no markets".
+const MARKETS_FILE = '/tmp/reckon-markets.json'
 // How long a locally written position is still shown while its blob commits.
 const PENDING_WINDOW_MS = 15 * 60 * 1000
 // A recall that hangs must not hold the HTTP request open behind it. Each
@@ -216,58 +221,71 @@ function normalizeMarket(m) {
   }
 }
 
-// GET /api/markets?tab=all|sports
-router.get('/markets', async (req, res) => {
-  const { tab } = req.query
+// The market cache is keyed by tab. Reading it never throws: a missing or
+// malformed file simply means there is nothing to fall back to.
+function readMarketsCache(tab) {
   try {
-    let url = 'https://gamma-api.polymarket.com/markets?closed=false&limit=40&order=volume24hr&ascending=false'
-    let isEvents = false
-
-    if (tab === 'sports') {
-      url = 'https://gamma-api.polymarket.com/events?closed=false&limit=40&tag_slug=sports'
-      isEvents = true
+    if (!fs.existsSync(MARKETS_FILE)) return null
+    const parsed = JSON.parse(fs.readFileSync(MARKETS_FILE, 'utf-8'))
+    const entry = parsed && parsed[tab]
+    if (entry && Array.isArray(entry.markets) && entry.markets.length > 0) {
+      return entry.markets
     }
+  } catch (err) {
+    console.error('Error reading markets cache:', err.message)
+  }
+  return null
+}
 
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`Polymarket returned status ${response.status}`)
+function writeMarketsCache(tab, markets) {
+  if (!Array.isArray(markets) || markets.length === 0) return
+  try {
+    let parsed = {}
+    if (fs.existsSync(MARKETS_FILE)) {
+      parsed = JSON.parse(fs.readFileSync(MARKETS_FILE, 'utf-8')) || {}
     }
+    parsed[tab] = { savedAt: Date.now(), markets }
+    const tmp = `${MARKETS_FILE}.${process.pid}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(parsed), 'utf-8')
+    fs.renameSync(tmp, MARKETS_FILE)
+  } catch (err) {
+    console.error('Error writing markets cache:', err.message)
+  }
+}
 
-    const data = await response.json()
-    let rawMarkets = []
+function marketsReason(error) {
+  if (error && error.name === 'MissingApiKeyError') return 'not_configured'
+  return 'tatum_unavailable'
+}
 
-    if (isEvents) {
-      // Flatten event.markets into the same shape
-      if (Array.isArray(data)) {
-        for (const evt of data) {
-          if (Array.isArray(evt.markets)) {
-            for (const m of evt.markets) {
-              rawMarkets.push({
-                ...m,
-                question: m.question || evt.title || evt.slug
-              })
-            }
-          }
-        }
-      }
-    } else {
-      rawMarkets = Array.isArray(data) ? data : []
-    }
-
-    const normalized = rawMarkets
-      .map(normalizeMarket)
-      .filter((m) => m && m.conditionId && m.question)
-
-    res.json({ markets: normalized })
+// GET /api/markets?tab=all|sports
+//
+// The contract stays { markets } on success. On a Tatum failure the last good
+// list is served with marketsAvailable:false and a machine-readable reason; if
+// there is no cache the response is a 502 error, never an empty list.
+router.get('/markets', async (req, res) => {
+  const tab = req.query.tab === 'sports' ? 'sports' : 'all'
+  try {
+    const markets = await listMarkets(tab)
+    writeMarketsCache(tab, markets)
+    res.json({ markets, marketsAvailable: true, marketsSource: 'tatum' })
   } catch (error) {
-    console.error('Failed to fetch Polymarket markets:', error)
+    console.error('Failed to load Tatum markets:', error && error.message ? error.message : error)
+    const reason = marketsReason(error)
+    const cached = readMarketsCache(tab)
+    if (cached) {
+      return res.json({
+        markets: cached,
+        marketsAvailable: false,
+        marketsSource: 'cache',
+        marketsReason: reason
+      })
+    }
     res.status(502).json({
-      error: 'Could not load markets. The market data service did not respond.'
+      error: 'Could not load markets. The market data service did not respond.',
+      marketsAvailable: false,
+      marketsSource: 'cache',
+      marketsReason: reason
     })
   }
 })
