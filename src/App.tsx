@@ -436,7 +436,7 @@ export default function App() {
                       >
                         <div className="space-y-xs flex-1 min-w-0 pr-md">
                           <div className="flex items-center gap-xs caption-5 text-quaternary">
-                            <span>24h vol: ${Math.round(market.volume24hr || 0).toLocaleString()}</span>
+                            <span>volume: ${Math.round(market.volume24hr || 0).toLocaleString()}</span>
                             <span>•</span>
                             <span>
                               {market.endDate
@@ -505,7 +505,7 @@ export default function App() {
                     ID: {selectedMarket.conditionId.slice(0, 10)}...
                   </span>
                   <span>•</span>
-                  <span>24h volume: ${Math.round(selectedMarket.volume24hr || 0).toLocaleString()}</span>
+                  <span>volume: ${Math.round(selectedMarket.volume24hr || 0).toLocaleString()}</span>
                   {selectedMarket.endDate && (
                     <>
                       <span>•</span>
