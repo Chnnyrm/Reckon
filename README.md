@@ -23,9 +23,11 @@ is only meaningful if it cannot be rewritten.
 
 ## What Reckon does
 
-1. Reads live markets from Polymarket's public API with their current prices.
+1. Reads live markets through Tatum's prediction markets endpoints with their
+   current prices. The underlying markets are Polymarket's.
 2. Takes a position and writes it to Walrus Memory with the price at that moment.
-3. Grades every position against the live price, mark to market.
+3. Grades every position against the live price, mark to market, by fetching the
+   market's condition id from Tatum's detail endpoint.
 4. Sells a verdict to software agents over x402, paid in USDC on Sui.
 
 Grading is mark to market rather than resolution. These markets resolve months
@@ -36,7 +38,8 @@ from now, so a resolution based design would show nothing for weeks.
 ```mermaid
 flowchart LR
     B[Browser<br/>React and Vite] -->|/api| F[Vercel function<br/>Express]
-    F -->|market data| P[Polymarket API]
+    F -->|market data| T[Tatum prediction markets]
+    T -.->|underlying markets| P[Polymarket]
     F -->|remember and recall| W[Walrus Memory<br/>relayer]
     W -->|blobs| S[Sui]
     F -->|verify digest| G[Sui GraphQL]
@@ -104,16 +107,20 @@ Tatum account: `6addae51f9f9306c432153f9`
 | Service | Used for |
 | --- | --- |
 | Walrus Memory | every position, one namespace per app, recalled by meaning |
-| Tatum | server side key handling and on chain verification |
+| Tatum | server side key handling, every market read, and on chain verification |
 | Sui | blob storage for memories, and settlement for agent payments |
 | x402 through suimpp | the payment scheme for agent access |
-| Polymarket | live markets and prices, read only |
+| Polymarket | the underlying markets behind the feed, read only through Tatum |
 
 ## Honest limits
 
 - x402 on Sui uses `suimpp`, a draft community scheme. Coinbase's x402 does not
   list Sui as a supported network.
-- Polymarket is read over a public API. Reckon never transacts on Polygon.
+- Markets arrive through Tatum's prediction markets API. The underlying contracts
+  are Polymarket's, and Reckon never transacts on Polygon.
+- If Tatum cannot answer, the last market list is served with
+  `marketsAvailable: false` and a reason, or the page shows an error. An empty
+  list is never presented as "there are no markets".
 - Tatum's Sui JSON-RPC host does not exist, so on chain verification currently
   uses Sui GraphQL. The code carries a TODO naming the Tatum Sui gRPC host.
 - Recall is bounded at 15 seconds. Past that the record is served from cache and

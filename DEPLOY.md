@@ -18,8 +18,8 @@ under Project → Settings → Environment Variables; never commit them.
 | `MEMWAL_PRIVATE_KEY` | yes | 32-byte Ed25519 seed as 64 hex characters; a leading `0x` is stripped. |
 | `MEMWAL_SERVER_URL` | no | Defaults to `https://relayer.memory.walrus.xyz`. |
 | `MEMWAL_NAMESPACE_PREFIX` | no | Unset means the namespace is `reckon`. Set to `x`, the namespace becomes `x-reckon`. This decides which memories the deployment reads — choose it deliberately. |
-| `TATUM_API_KEY` | no | Only `/api/tatum/status` and `/api/verify` read it; the credential guard also redacts it from responses. |
-| `TATUM_API_BASE` | no | Defaults to `https://api.tatum.io`. |
+| `TATUM_API_KEY` | yes | Read by the market list, position grading, `/api/tatum/status` and `/api/verify`; the credential guard also redacts it from responses. |
+| `TATUM_API_BASE` | no | Defaults to `https://api.tatum.io`. Every Tatum call uses it, including prediction markets. |
 | `MPP_SECRET_KEY` | no | mppx realm secret; `server/routes/oracle.mjs` falls back to a development value when unset. |
 | `RECKON_SUI_RECIPIENT` | no | mppx recipient; falls back to the zero address when unset. |
 
@@ -29,6 +29,14 @@ something where a credentials file exists, and Vercel supplies the other two.
 `/api/memory/status` reports `configured: true` only when both the account id
 and a valid key are present. Without them the API still answers: reads serve
 the cache with `memoryAvailable: false` and `memoryReason: "not_configured"`.
+
+`/api/markets` keeps its `{ markets }` contract and adds `marketsAvailable`,
+`marketsSource` and `marketsReason`. A live answer has `marketsSource: "tatum"`;
+when Tatum fails, the last good list is served from `/tmp/reckon-markets.json`
+with `marketsAvailable: false`, and with no cache the route answers 502 instead
+of an empty list. Position grading asks Tatum for the stored condition id and
+returns `currentPrice: null` when that market cannot be fetched or does not
+match the requested id.
 
 ## Verified locally
 
@@ -46,8 +54,9 @@ the cache with `memoryAvailable: false` and `memoryReason: "not_configured"`.
 Recall against the live relayer measured 3.8s cold and 1.0–1.2s warm in the
 `reckon` namespace (7.3s cold, 1.6–1.8s warm in a namespace holding four
 memories). A full `GET /api/positions` after the write took 2.5s including the
-Polymarket grading fetches. A recall that never answers is cut off at 15s and
-serves the cache with `memoryAvailable: false`.
+grading calls; grading now asks Tatum's detail endpoint for each stored
+condition id. A recall that never answers is cut off at 15s and serves the
+cache with `memoryAvailable: false`.
 
 ## What will not work on Vercel
 
