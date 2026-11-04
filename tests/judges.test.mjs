@@ -170,6 +170,7 @@ test('the narration is paced to fit each chapter', () => {
     CHAPTERS,
     INTRO_LINE,
     INTRO_MS,
+    INTRO_INTEGRATIONS_MS,
     INTRO_TITLE,
     TOTAL_SECONDS,
     CHAPTER_STARTS,
@@ -188,6 +189,7 @@ test('the narration is paced to fit each chapter', () => {
   assert.doesNotMatch(INTRO_LINE, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
   assert.ok(INTRO_MS >= 7000)
   assert.ok(INTRO_MS >= speechEstimateMs(INTRO_LINE) + 500, 'the intro must fit its spoken line')
+  assert.ok(INTRO_INTEGRATIONS_MS >= 4000, 'the integration set needs time to land and hold')
   assert.equal(CHAPTER_STARTS[0], INTRO_MS)
   assert.equal(timelineAt(0).intro, true)
   assert.equal(timelineAt(INTRO_MS).intro, false)
@@ -227,6 +229,26 @@ test('the narration is paced to fit each chapter', () => {
     total += duration
   }
   assert.equal(Math.round(total / 1000), TOTAL_SECONDS)
+})
+
+test('the intro names all four integrations with their marks', () => {
+  const { INTRO_INTEGRATIONS_MS, INTRO_MS, speechEstimateMs, INTRO_LINE } = filmModel
+  assert.ok(INTRO_INTEGRATIONS_MS >= 4000)
+  assert.ok(INTRO_MS >= speechEstimateMs(INTRO_LINE) + 500 + INTRO_INTEGRATIONS_MS)
+
+  const cover = sources['FilmCover.tsx']
+  const film = sources['Film.tsx']
+  for (const label of ['Memory', 'Chain data', 'Markets', 'Agent payments']) {
+    assert.ok(cover.includes(`label: '${label}'`), `intro lacks the ${label} integration`)
+  }
+  assert.match(cover, /BrandImage brand="walrus"[\s\S]*?alt="Walrus"/)
+  assert.match(cover, /BrandImage brand="tatum"[\s\S]*?alt="Tatum"/)
+  assert.match(cover, /BrandImage brand="tatum"[\s\S]*?alt="Tatum prediction markets"/)
+  assert.match(cover, /BrandImage brand="sui"[\s\S]*?alt="Sui"/)
+  assert.match(cover, /<X402Wordmark/)
+  assert.match(cover, /localMs: number/)
+  assert.match(cover, /staticMode: boolean/)
+  assert.match(film, /<IntroCard localMs=\{frame\.localMs\} staticMode=\{staticMode\} \/>/)
 })
 
 test('the cover holds for two and a half seconds', () => {

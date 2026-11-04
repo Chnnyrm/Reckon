@@ -242,7 +242,7 @@ export default function Film() {
                 <div className="relative w-full">
                   <div className="relative h-[30rem] w-full sm:h-[32rem]">
                     {frame.intro ? (
-                      <IntroCard />
+                      <IntroCard localMs={frame.localMs} staticMode={staticMode} />
                     ) : (
                       <>
                         <div className="absolute inset-0 z-10">

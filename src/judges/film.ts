@@ -113,13 +113,17 @@ export function speechEstimateMs(line: string): number {
 }
 
 // The intro is not a chapter and has no market scene. It holds a full-frame
-// card while one line explains what Reckon is and who it is for. The card is
-// longer than seven seconds because the line is 26 words: at 13 characters per
-// second it needs twelve seconds, and the intro must not cut the line short.
+// card while one line explains what Reckon is and who it is for, then shows
+// the four integrations as marks and short labels. The spoken line stays the
+// same; the extra time is for the visual integration set to land and hold.
+// At 13 characters per second the line needs twelve seconds, so the intro is
+// 16.5 seconds and every mark is on screen together before it ends.
 export const INTRO_TITLE = 'A forecasting record you can audit'
 export const INTRO_LINE =
   'Reckon is a public record of forecasting positions on prediction markets. It is for analysts and forecasters, and for the software agents that rely on them.'
-export const INTRO_MS = Math.max(7000, speechEstimateMs(INTRO_LINE) + 500)
+export const INTRO_INTEGRATIONS_MS = 4000
+export const INTRO_MS =
+  Math.max(7000, speechEstimateMs(INTRO_LINE) + 500) + INTRO_INTEGRATIONS_MS
 
 export function chapterDurationMs(chapter: Chapter): number {
   return COVER_MS + chapter.sceneMs + HOLD_MS

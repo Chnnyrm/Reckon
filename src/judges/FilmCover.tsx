@@ -430,7 +430,49 @@ function CoverExhibit({ index }: { index: number }) {
   )
 }
 
-export function IntroCard() {
+export function IntroCard({
+  localMs,
+  staticMode,
+}: {
+  localMs: number
+  staticMode: boolean
+}) {
+  // Four integrations, each with its own mark. The labels are two or three
+  // words at most; the spoken intro stays one line and is carried in the
+  // captions, not read out as a list. A paused frame shows the whole set.
+  const at = (start: number) => (staticMode ? 1 : easeOut(span(localMs, start, start + 380)))
+  const integrations = [
+    {
+      key: 'memory',
+      label: 'Memory',
+      mark: <BrandImage brand="walrus" height={28} alt="Walrus" />,
+      start: 500,
+    },
+    {
+      key: 'chain-data',
+      label: 'Chain data',
+      mark: <BrandImage brand="tatum" height={24} alt="Tatum" />,
+      start: 920,
+    },
+    {
+      key: 'markets',
+      label: 'Markets',
+      mark: <BrandImage brand="tatum" height={24} alt="Tatum prediction markets" />,
+      start: 1340,
+    },
+    {
+      key: 'agent-payments',
+      label: 'Agent payments',
+      mark: (
+        <span className="flex items-center gap-xs">
+          <BrandImage brand="sui" height={24} alt="Sui" />
+          <X402Wordmark className="text-base leading-none" />
+        </span>
+      ),
+      start: 1760,
+    },
+  ]
+
   return (
     <div
       aria-hidden="true"
@@ -469,19 +511,30 @@ export function IntroCard() {
         {INTRO_TITLE}
       </p>
 
-      <div className="relative z-10 mt-sm flex flex-wrap items-center justify-between gap-md border-t border-primary/40 pt-md font-mono text-[11px] text-quaternary">
-        <div className="flex items-center gap-md">
-          <span>SUI MAINNET</span>
-          <span>/</span>
-          <span>WALRUS MEMORY</span>
-          <span>/</span>
-          <span>TATUM SCALED</span>
-        </div>
-        <div className="flex items-center gap-md opacity-80">
-          <BrandImage brand="sui" height={20} alt="Sui" />
-          <BrandImage brand="walrus" height={28} alt="Walrus" />
-          <BrandImage brand="tatum" height={24} alt="Tatum" />
-        </div>
+      {/* The integration set. All four stay on screen once they have entered,
+          so the first seconds of the film can be screenshotted as one card. */}
+      <div className="relative z-10 grid grid-cols-2 gap-sm sm:grid-cols-4">
+        {integrations.map((item) => {
+          const opacity = at(item.start)
+          return (
+            <div
+              key={item.key}
+              className="flex min-h-[4.75rem] flex-col justify-between gap-sm rounded-lg border border-primary/60 bg-secondary/70 p-sm backdrop-blur-xs"
+              style={{
+                opacity,
+                transform: `translateY(${(1 - opacity) * 10}px)`,
+              }}
+            >
+              <span className="flex h-7 items-center">{item.mark}</span>
+              <span className="text-xs font-medium text-secondary">{item.label}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="relative z-10 flex flex-wrap items-center justify-between gap-sm border-t border-primary/40 pt-md font-mono text-[10px] text-quaternary">
+        <span>POLYMARKET MARKETS, READ THROUGH TATUM</span>
+        <span>CAPTURED 31 OCT 2026</span>
       </div>
     </div>
   )
