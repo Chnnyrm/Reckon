@@ -50,8 +50,7 @@ export const LINKS = {
   suimpp: 'https://suimpp.dev',
   mppx: 'https://github.com/wevm/mppx',
   polymarket: 'https://polymarket.com',
-  gamma:
-    'https://gamma-api.polymarket.com/markets?closed=false&limit=40&order=volume24hr&ascending=false',
+  tatumMarkets: 'https://docs.tatum.io/reference/getpredictionmarkets',
   oracle: `${LIVE_APP}/api/oracle/verdict`,
   memoryStatus: `${LIVE_APP}/api/memory/status`,
   market:
@@ -177,10 +176,10 @@ export const EVIDENCE: Evidence[] = [
     linkLabel: 'Call the endpoint',
   },
   {
-    claim: 'Markets come from Polymarket',
-    value: 'gamma-api.polymarket.com',
-    href: LINKS.gamma,
-    linkLabel: 'Open the public market API',
+    claim: 'Markets arrive through Tatum',
+    value: 'Tatum prediction markets API',
+    href: LINKS.tatumMarkets,
+    linkLabel: 'Open the Tatum API docs',
   },
   {
     claim: 'Tatum AI Builder wrote commits',
@@ -236,11 +235,11 @@ export const LIMITS: Limit[] = [
     linkLabel: 'Read the suimpp scheme',
   },
   {
-    title: 'Polymarket is read-only here',
+    title: 'The markets are Polymarket\'s, read through Tatum',
     body:
-      'Market questions and prices are read from the public Polymarket API. Reckon never transacts on Polygon and never takes a position in the underlying market.',
-    href: LINKS.gamma,
-    linkLabel: 'Open the public market API',
+      "Market questions and prices arrive through Tatum's prediction markets endpoints. The underlying contracts are Polymarket's. Reckon never transacts on Polygon and never takes a position in the underlying market.",
+    href: LINKS.tatumMarkets,
+    linkLabel: 'Open the Tatum API docs',
   },
   {
     title: 'Tatum does not host Sui JSON-RPC',

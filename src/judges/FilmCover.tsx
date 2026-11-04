@@ -161,7 +161,7 @@ export function CoverCard({
           {index === 0 ? (
             <div className="flex items-center gap-xs rounded-full border border-primary bg-secondary px-sm py-xxs text-[11px] text-secondary">
               <span className="h-1.5 w-1.5 rounded-full bg-reckon-up" />
-              <span>Polymarket Feed</span>
+              <span>Tatum Markets</span>
             </div>
           ) : null}
 
@@ -253,7 +253,7 @@ function CoverExhibit({ index }: { index: number }) {
             </div>
             <div className="flex justify-between">
               <span className="text-quaternary">Engine</span>
-              <span className="text-secondary">Polymarket CLOB</span>
+              <span className="text-secondary">Polymarket via Tatum</span>
             </div>
           </div>
         </div>

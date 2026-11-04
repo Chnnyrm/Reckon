@@ -26,9 +26,10 @@ export const CHAPTERS: Chapter[] = [
     segment: 'Markets',
     coverTitle: 'Markets',
     coverLine: 'Live prediction markets, real prices.',
-    caption: "Markets come from Polymarket's public API with live prices.",
+    caption:
+      "Markets arrive through Tatum's prediction markets API with live prices. The underlying markets are Polymarket's.",
     lines: [
-      'So, right here on the mobile feed, we stream live prediction markets, pulling real odds directly from Polymarket without asking for any account.',
+      "So, right here on the mobile feed, we stream live prediction markets, pulling real odds through Tatum's prediction markets API with no account.",
       'Check out these outcome tiles right here. As market volume shifts on screen, the app tracks liquidity without ever placing speculative trades.',
     ],
     sceneMs: 22000,

@@ -55,7 +55,7 @@ export function JudgesFooter() {
             title="The app"
             links={[
               { label: 'Live app', href: LINKS.live },
-              { label: 'Market API', href: LINKS.gamma },
+              { label: 'Market API', href: LINKS.tatumMarkets },
               { label: 'One market', href: LINKS.market },
             ]}
           />

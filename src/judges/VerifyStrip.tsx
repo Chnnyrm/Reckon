@@ -59,9 +59,14 @@ const groups = [
     href: LINKS.mppx,
   },
   {
+    name: 'Tatum markets',
+    proves: 'the market feed and prices',
+    href: LINKS.tatumMarkets,
+  },
+  {
     name: 'Polymarket',
-    proves: 'the market feed',
-    href: LINKS.gamma,
+    proves: 'the underlying contracts',
+    href: LINKS.polymarket,
   },
 ]
 
@@ -79,7 +84,7 @@ export function VerifyStrip() {
           />
           <div className="flex items-center gap-sm text-xs text-quaternary">
             <CheckCircle size={14} weight="fill" className="text-reckon-accent" aria-hidden="true" />
-            12 claim checks, each with a source
+            13 claim checks, each with a source
           </div>
         </div>
 

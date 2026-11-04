@@ -299,7 +299,7 @@ function MarketsScene({ progress }: { progress: number }) {
 
   return (
     <div className="flex h-full flex-col justify-center gap-md p-sm sm:p-lg">
-      <SceneHeader label="Live Mobile Feed / Polymarket" meta="Public API" />
+      <SceneHeader label="Live Mobile Feed / Tatum" meta="Prediction Markets API" />
 
       <PhoneShell activeTab="markets" scale={zoom} origin="center 60%">
         {/* Mobile Search & Filter Tabs from App.tsx */}

@@ -12,7 +12,7 @@ export function TatumSection() {
           index="04"
           label="Tatum"
           title="Tatum builds the app. Verification still has a gap."
-          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client for REST and JSON-RPC work. Sui is the exception: Tatum has no Sui JSON-RPC host, so payment verification calls Sui GraphQL today."
+          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client for REST and JSON-RPC work, and reads every market through Tatum's prediction markets endpoints. Sui is the exception: Tatum has no Sui JSON-RPC host, so payment verification calls Sui GraphQL today."
         />
 
         <div className="mt-4xl grid gap-xl lg:grid-cols-3">
@@ -28,7 +28,7 @@ export function TatumSection() {
             icon={<Plugs size={16} weight="bold" aria-hidden="true" />}
             label="Server"
             title="Tatum API client"
-            body="The server routes through a Tatum-aware client. The key stays server-side. Today its visible use is a health check; the Sui verification path below is the exception."
+            body="The server routes through a Tatum-aware client. The key stays server-side. Market lists and position grading call Tatum's prediction markets endpoints; the Sui verification path below is the exception."
             href={LINKS.tatumClientSource}
             linkLabel="Read the client"
           />
