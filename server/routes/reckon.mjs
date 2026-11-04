@@ -184,43 +184,6 @@ startupRecall = loadPositions().catch((err) => {
   return null
 })
 
-// Helper to safely parse JSON strings
-function safeJsonParse(val, fallback) {
-  if (!val) return fallback
-  if (Array.isArray(val)) return val
-  try {
-    return JSON.parse(val)
-  } catch {
-    return fallback
-  }
-}
-
-// Normalize raw market object to exact spec fields
-function normalizeMarket(m) {
-  if (!m) return null
-  const outcomesRaw = safeJsonParse(m.outcomes, [])
-  const outcomePricesRaw = safeJsonParse(m.outcomePrices, [])
-
-  const outcomes = Array.isArray(outcomesRaw) ? outcomesRaw.map(String) : []
-  const outcomePrices = Array.isArray(outcomePricesRaw)
-    ? outcomePricesRaw.map((p) => {
-        const num = parseFloat(p)
-        return isNaN(num) ? null : num
-      })
-    : []
-
-  return {
-    question: m.question || m.title || '',
-    slug: m.slug || '',
-    conditionId: m.conditionId || m.id || '',
-    outcomes,
-    outcomePrices,
-    volume24hr: typeof m.volume24hr === 'number' ? m.volume24hr : parseFloat(m.volume24hr) || 0,
-    endDate: m.endDate || '',
-    image: m.image || ''
-  }
-}
-
 // The market cache is keyed by tab. Reading it never throws: a missing or
 // malformed file simply means there is nothing to fall back to.
 function readMarketsCache(tab) {
