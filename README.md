@@ -42,7 +42,8 @@ flowchart LR
     T -.->|underlying markets| P[Polymarket]
     F -->|remember and recall| W[Walrus Memory<br/>relayer]
     W -->|blobs| S[Sui]
-    F -->|verify digest| G[Sui GraphQL]
+    F -->|verify digest| TG[Tatum Sui gRPC]
+    TG -.->|fallback| G[Sui GraphQL]
     A[External agent] -->|402 then digest| F
 ```
 
@@ -81,18 +82,27 @@ sequenceDiagram
     participant A as Agent
     participant R as Reckon
     participant C as Sui
+    participant T as Tatum Sui gRPC
 
     A->>R: GET /api/oracle/verdict
     R-->>A: 402 with amount, recipient, currency
     A->>C: transfer USDC, gasless
     C-->>A: transaction digest
     A->>R: retry with x-sui-digest
-    R->>C: read the transaction
-    C-->>R: success, sender, amount
+    R->>T: read the transaction
+    T-->>R: status and sender
+    Note over R,T: public Sui GraphQL answers if Tatum cannot
     R-->>A: verdict
 ```
 
 One digest buys one call. The digest is stored and replaying it is refused.
+
+Verification asks Tatum's Sui gRPC gateway first, with the key in `x-api-key`
+metadata. If that call fails - bad key, timeout, outage, a digest Tatum does not
+know - it asks public Sui GraphQL, and the response carries
+`source: "sui-graphql"` instead of `source: "tatum"`. When neither path answers,
+the result is `ok: false` with a reason that says verification could not be
+performed; a payment that cannot be checked is never reported as invalid.
 
 ## How it was built
 
@@ -121,8 +131,9 @@ Tatum account: `6addae51f9f9306c432153f9`
 - If Tatum cannot answer, the last market list is served with
   `marketsAvailable: false` and a reason, or the page shows an error. An empty
   list is never presented as "there are no markets".
-- Tatum's Sui JSON-RPC host does not exist, so on chain verification currently
-  uses Sui GraphQL. The code carries a TODO naming the Tatum Sui gRPC host.
+- On chain verification runs through Tatum's Sui gRPC gateway, with public Sui
+  GraphQL as a named fallback when Tatum is unreachable. Neither is a full node
+  we operate, and the response says which path answered.
 - Recall is bounded at 15 seconds. Past that the record is served from cache and
   the page says so rather than showing a short list as if it were complete.
 - These markets have not resolved, so the record shows movement, not accuracy.

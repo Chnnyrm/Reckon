@@ -18,7 +18,7 @@ under Project → Settings → Environment Variables; never commit them.
 | `MEMWAL_PRIVATE_KEY` | yes | 32-byte Ed25519 seed as 64 hex characters; a leading `0x` is stripped. |
 | `MEMWAL_SERVER_URL` | no | Defaults to `https://relayer.memory.walrus.xyz`. |
 | `MEMWAL_NAMESPACE_PREFIX` | no | Unset means the namespace is `reckon`. Set to `x`, the namespace becomes `x-reckon`. This decides which memories the deployment reads — choose it deliberately. |
-| `TATUM_API_KEY` | yes | Read by the market list, position grading, `/api/tatum/status` and `/api/verify`; the credential guard also redacts it from responses. |
+| `TATUM_API_KEY` | yes | Read by the market list, position grading, `/api/tatum/status` and `/api/verify`, and sent as `x-api-key` gRPC metadata to the Sui verification gateway; the credential guard also redacts it from responses. |
 | `TATUM_API_BASE` | no | Defaults to `https://api.tatum.io`. Every Tatum call uses it, including prediction markets. |
 | `MPP_SECRET_KEY` | no | mppx realm secret; `server/routes/oracle.mjs` falls back to a development value when unset. |
 | `RECKON_SUI_RECIPIENT` | no | mppx recipient; falls back to the zero address when unset. |
@@ -37,6 +37,17 @@ with `marketsAvailable: false`, and with no cache the route answers 502 instead
 of an empty list. Position grading asks Tatum for the stored condition id and
 returns `currentPrice: null` when that market cannot be fetched or does not
 match the requested id.
+
+`/api/verify?digest=...` keeps `{ ok, sender, reason }` and adds `source`. A
+digest is read through Tatum's Sui gRPC gateway at
+`sui-mainnet-grpc.gateway.tatum.io:443` first (native gRPC over HTTP/2, the key
+in `x-api-key` metadata, an 8s deadline, a read mask for status and sender
+only), and the reply carries `source: "tatum"`. If that call fails for any
+reason the route asks public Sui GraphQL and the reply carries
+`source: "sui-graphql"`. When both fail the reply is `ok: false` with a reason
+that begins "Verification could not be performed" and `source: null`; a payment
+that cannot be checked is never reported as invalid. Worst case is about 16s
+(8s per path), which is why the function has `maxDuration: "max"`.
 
 ## Verified locally
 
@@ -64,12 +75,13 @@ cache with `memoryAvailable: false`.
   environment, so no `vercel deploy` ran. `vercel.json` was checked against
   the published `vercel.json` schema and the function was exercised locally as
   a bare `(req, res)` handler; the CDN-side rewrites themselves are untested.
-- **`/api/oracle/verdict`'s digest fallback.** When mppx does not answer, the
-  route verifies a digest by fetching
-  `http://localhost:${PORT ?? 3000}/api/verify` — a self-call to the local
-  listener. On Vercel the function is invoked directly and nothing listens on
-  a local port, so that fetch fails and the route answers 402. The normal
-  mppx charge path does not use the self-call and is unaffected.
+- **The Sui verification channel on Vercel.** When mppx does not answer,
+  `/api/oracle/verdict` calls `verifyDigest` in process. That used to be a
+  self-call to `http://localhost:PORT/api/verify`, which could not work in a
+  serverless function; the self-call is gone. The Tatum gRPC client opens one
+  HTTP/2 channel per instance and reuses it, and needs outbound TLS to
+  `sui-mainnet-grpc.gateway.tatum.io:443`. It was exercised locally against the
+  live gateway, not on Vercel, because no deploy ran.
 - **Cross-instance visibility of a just-written position.** Writes are
   acknowledged with a job, and the blob commits later (~12s above). Until it
   does, the position is only in the instance's `/tmp` cache, so a read that
