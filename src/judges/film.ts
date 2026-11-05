@@ -15,7 +15,7 @@ export type Chapter = {
   coverTitle: string
   coverLine: string
   caption: string
-  lines: [string, string]
+  lines: string[]
   sceneMs: number
 }
 
@@ -56,6 +56,7 @@ export const CHAPTERS: Chapter[] = [
     caption: 'The write takes about 12 seconds to commit; recall is the source of truth.',
     lines: [
       'Next, that move payload dispatches out to the Walrus Memory relayer under the reckon namespace, giving us an instant job confirmation.',
+      'The write is encrypted before it lands.',
       'Look at that committed hash. Walrus seals our data into an immutable decentralized blob, anchored to an irreversible Sui epoch timestamp.',
     ],
     sceneMs: 26000,
@@ -82,7 +83,9 @@ export const CHAPTERS: Chapter[] = [
     caption: 'The endpoint is public, the payment is the credential, and one digest buys one call.',
     lines: [
       'Here is the exciting part. An autonomous AI agent queries our oracle endpoint, and gets back a clean payment challenge with zero sign-up friction.',
+      'The challenge becomes a payment digest on Sui.',
       'The agent settles one cent in USDC on Sui testnet, and once verified, our endpoint delivers the cryptographic forecasting verdict.',
+      'The verdict returns verified, and the record keeps it.',
     ],
     sceneMs: 31000,
   },
@@ -95,42 +98,72 @@ export const CHAPTERS: Chapter[] = [
     caption: 'The shell was generated. The Walrus and x402 integrations were built by hand.',
     lines: [
       'To get this off the ground fast, Tatum AI Builder scaffolded the full application shell and Express backend server for us.',
+      'The generated shell keeps its build facts.',
       'From there, we hand-coded the native Walrus Memory client and Sui payment verification, establishing full provenance in our git history.',
     ],
     sceneMs: 26000,
   },
 ]
 
-// Two beats per chapter. The first starts with the chapter, the second at 55
-// percent. SpeechSynthesis cannot report a duration, so 13 characters per
-// second is the conservative estimate used by the tests and the report. It
-// does not stretch the clock: the scene keeps moving between the two beats.
+// Chapters carry two primary beats, plus a short beat where the scene would
+// otherwise sit silent for more than about three seconds. The first starts
+// with the chapter, the old second beat keeps its 55 percent slot, and any
+// short beat is inserted into the gap before it (or after it, for the tail).
+// SpeechSynthesis cannot report a duration, so 13 characters per second is the
+// conservative estimate used by the tests and the report. It does not stretch
+// the clock: the scene keeps moving between beats.
 export const SPEECH_CHARS_PER_SECOND = 13
 export const SECOND_BEAT_AT = 0.55
+export const BEAT_GAP_MS = 200
+export const TAIL_BEAT_GAP_MS = 300
 
 export function speechEstimateMs(line: string): number {
   return Math.round((line.length / SPEECH_CHARS_PER_SECOND) * 1000)
 }
 
 // The intro is not a chapter and has no market scene. It holds a full-frame
-// card while one line explains what Reckon is and who it is for, then shows
-// the four integrations as marks and short labels. The spoken line stays the
-// same; the extra time is for the visual integration set to land and hold.
-// At 13 characters per second the line needs twelve seconds, so the intro is
-// 16.5 seconds and every mark is on screen together before it ends.
+// card while two beats explain what Reckon is: the product first, then the
+// integrations in prose as their marks appear. The second beat starts exactly
+// when the first integration card enters, so no mark is left unexplained. The
+// tail is under a second; neither line is cut.
 export const INTRO_TITLE = 'A forecasting record you can audit'
 export const INTRO_LINE =
   'Reckon is a public record of forecasting positions on prediction markets. It is for analysts and forecasters, and for the software agents that rely on them.'
-export const INTRO_INTEGRATIONS_MS = 4000
-export const INTRO_MS =
-  Math.max(7000, speechEstimateMs(INTRO_LINE) + 500) + INTRO_INTEGRATIONS_MS
+export const INTRO_LINE_TWO =
+  'Positions are kept in Walrus Memory. Markets and chain data come through Tatum. And agents pay a cent over x402, on Sui, to read a forecast.'
+export const INTRO_LINES = [INTRO_LINE, INTRO_LINE_TWO] as const
+export const INTRO_SECOND_BEAT_AT = Math.max(
+  3000,
+  speechEstimateMs(INTRO_LINE) + 250
+)
+export const INTRO_TAIL_MS = 800
+export const INTRO_MS = Math.max(
+  7000,
+  INTRO_SECOND_BEAT_AT + speechEstimateMs(INTRO_LINE_TWO) + INTRO_TAIL_MS
+)
 
 export function chapterDurationMs(chapter: Chapter): number {
   return COVER_MS + chapter.sceneMs + HOLD_MS
 }
 
-export function beatTwoStartMs(chapter: Chapter): number {
-  return Math.round(chapterDurationMs(chapter) * SECOND_BEAT_AT)
+// Local start times for a chapter's spoken lines. Two-line chapters keep the
+// old 55 percent second beat. Three-line chapters get a short beat that fills
+// the gap between the first and second lines; a four-line chapter gets a second
+// short beat for the tail. The extra lines are written against FilmStages, so
+// each one describes what is actually on screen at that point.
+export function chapterBeatStarts(chapter: Chapter): number[] {
+  const duration = chapterDurationMs(chapter)
+  const secondBeat = Math.round(duration * SECOND_BEAT_AT)
+  if (chapter.lines.length <= 1) return [FIRST_LINE_AT]
+  if (chapter.lines.length === 2) return [FIRST_LINE_AT, secondBeat]
+
+  const starts = [FIRST_LINE_AT]
+  starts.push(FIRST_LINE_AT + speechEstimateMs(chapter.lines[0]) + BEAT_GAP_MS)
+  starts.push(secondBeat)
+  if (chapter.lines.length >= 4) {
+    starts.push(secondBeat + speechEstimateMs(chapter.lines[2]) + TAIL_BEAT_GAP_MS)
+  }
+  return starts
 }
 
 export const CHAPTER_STARTS: number[] = (() => {
@@ -156,7 +189,8 @@ export type TimelineFrame = {
   scene: number
   fill: number
   cover: number
-  beat: 0 | 1 | 2
+  introBeat: 0 | 1 | 2
+  beat: 0 | 1 | 2 | 3 | 4
 }
 
 export function clamp01(value: number): number {
@@ -218,6 +252,7 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
       scene: 0,
       fill: clamp01(wrapped / INTRO_MS),
       cover: 0,
+      introBeat: wrapped >= INTRO_SECOND_BEAT_AT ? 2 : 1,
       beat: 0,
     }
   }
@@ -230,8 +265,13 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
     const next = start + duration
     if (wrapped < next || index === CHAPTERS.length - 1) {
       const local = Math.min(duration, wrapped - start)
-      const beat: 0 | 1 | 2 =
-        local >= duration * SECOND_BEAT_AT ? 2 : local >= FIRST_LINE_AT ? 1 : 0
+      const starts = chapterBeatStarts(chapter)
+      let beat: TimelineFrame['beat'] = 0
+      for (let beatIndex = 0; beatIndex < starts.length; beatIndex += 1) {
+        if (local >= starts[beatIndex]) {
+          beat = (beatIndex + 1) as TimelineFrame['beat']
+        }
+      }
       return {
         intro: false,
         index,
@@ -244,6 +284,7 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
         scene: clamp01((local - COVER_MS) / (duration - COVER_MS)),
         fill: clamp01(local / duration),
         cover: clamp01(local / COVER_MS),
+        introBeat: 0,
         beat,
       }
     }
@@ -261,6 +302,7 @@ export function timelineAt(elapsedMs: number): TimelineFrame {
     scene: 0,
     fill: 0,
     cover: 0,
+    introBeat: 0,
     beat: 0,
   }
 }

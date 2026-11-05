@@ -13,8 +13,9 @@ import { useReducedMotion } from './ui'
 import {
   CHAPTERS,
   CHAPTER_STARTS,
-  INTRO_LINE,
+  INTRO_LINES,
   INTRO_MS,
+  INTRO_SECOND_BEAT_AT,
   INTRO_TITLE,
   TOTAL_MS,
   TOTAL_SECONDS,
@@ -65,12 +66,10 @@ export default function Film() {
   }, [])
 
   const spokenLine = frame.intro
-    ? INTRO_LINE
-    : frame.beat === 2
-      ? frame.chapter.lines[1]
-      : frame.beat === 1
-        ? frame.chapter.lines[0]
-        : null
+    ? INTRO_LINES[frame.introBeat - 1]
+    : frame.beat > 0
+      ? frame.chapter.lines[frame.beat - 1]
+      : null
 
   useEffect(() => {
     if (started && playing && soundOn && voiceReady && spokenLine) {
@@ -118,8 +117,9 @@ export default function Film() {
   }, [])
 
   const seekToChapter = useCallback((index: number) => {
-    // A chapter is one narration line. Seeking lands on its first frame, and
-    // the speech effect cancels the old utterance and speaks the new line.
+    // A chapter is one section with one or more narration beats. Seeking lands
+    // on its first frame, and the speech effect cancels the old utterance and
+    // speaks the beat for that frame.
     const next = CHAPTER_STARTS[index]
     elapsedRef.current = next
     setElapsed(next)
@@ -180,7 +180,7 @@ export default function Film() {
   const captionTitle =
     frame.intro || frame.beat !== 0 ? null : frame.chapter.coverTitle
   const captionLine = frame.intro
-    ? INTRO_LINE
+    ? INTRO_LINES[frame.introBeat - 1]
     : frame.beat === 0
       ? frame.chapter.coverLine
       : frame.chapter.lines[frame.beat - 1]
@@ -242,7 +242,11 @@ export default function Film() {
                 <div className="relative w-full">
                   <div className="relative h-[30rem] w-full sm:h-[32rem]">
                     {frame.intro ? (
-                      <IntroCard localMs={frame.localMs} staticMode={staticMode} />
+                      <IntroCard
+                        localMs={frame.localMs}
+                        staticMode={staticMode}
+                        integrationsAt={INTRO_SECOND_BEAT_AT}
+                      />
                     ) : (
                       <>
                         <div className="absolute inset-0 z-10">
@@ -518,7 +522,14 @@ export default function Film() {
                   <li>
                     <p className="font-mono text-xs text-reckon-accent">Intro</p>
                     <p className="mt-xs text-sm font-semibold text-primary">{INTRO_TITLE}</p>
-                    <p className="mt-xs text-sm leading-6 text-secondary">{INTRO_LINE}</p>
+                    {INTRO_LINES.map((line, lineIndex) => (
+                      <p
+                        key={lineIndex}
+                        className="mt-xs text-sm leading-6 text-secondary"
+                      >
+                        {line}
+                      </p>
+                    ))}
                   </li>
                   {CHAPTERS.map((chapter, index) => (
                     <li key={chapter.id}>
@@ -545,9 +556,11 @@ export default function Film() {
                 aria-live={soundOn && voiceReady ? 'off' : 'polite'}
               >
                 {frame.intro ? (
-                  <div key="intro" className="narration-line">
+                  <div key={`intro-${frame.introBeat}`} className="narration-line">
                     <h2 className="text-lg font-semibold text-primary">{INTRO_TITLE}</h2>
-                    <p className="mt-md text-md leading-7 text-secondary">{INTRO_LINE}</p>
+                    <p className="mt-md text-md leading-7 text-secondary">
+                      {INTRO_LINES[frame.introBeat - 1]}
+                    </p>
                   </div>
                 ) : frame.beat === 0 ? (
                   <div key={`cover-${frame.index}`} className="narration-line">
@@ -561,20 +574,16 @@ export default function Film() {
                 ) : (
                   <>
                     <h2 className="text-lg font-semibold text-primary">{frame.chapter.name}</h2>
-                    <p
-                      key={`one-${frame.index}`}
-                      className="narration-line mt-md text-md leading-7 text-secondary"
-                    >
-                      {frame.chapter.lines[0]}
-                    </p>
-                    {frame.beat === 2 ? (
+                    {frame.chapter.lines.slice(0, frame.beat).map((line, lineIndex) => (
                       <p
-                        key={`two-${frame.index}`}
-                        className="narration-line mt-sm text-md leading-7 text-secondary"
+                        key={`beat-${frame.index}-${lineIndex}`}
+                        className={`narration-line ${
+                          lineIndex === 0 ? 'mt-md' : 'mt-sm'
+                        } text-md leading-7 text-secondary`}
                       >
-                        {frame.chapter.lines[1]}
+                        {line}
                       </p>
-                    ) : null}
+                    ))}
                   </>
                 )}
               </div>
@@ -599,7 +608,7 @@ export default function Film() {
                           ? 'Playing silently. The full narration for this section stays on screen.'
                           : frame.intro
                             ? playing
-                              ? 'The intro line is playing.'
+                              ? 'The intro beats are playing.'
                               : 'Paused on the intro. Press play to continue.'
                             : playing && frame.beat === 0
                               ? 'The cover holds, then the first line begins.'

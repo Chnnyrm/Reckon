@@ -165,76 +165,149 @@ test('the route is isolated from the product app', () => {
 })
 
 
-test('the narration is paced to fit each chapter', () => {
+test('the narration is paced to fit every beat', () => {
   const {
     CHAPTERS,
-    INTRO_LINE,
+    INTRO_LINES,
     INTRO_MS,
-    INTRO_INTEGRATIONS_MS,
+    INTRO_SECOND_BEAT_AT,
     INTRO_TITLE,
     TOTAL_SECONDS,
     CHAPTER_STARTS,
     chapterDurationMs,
-    beatTwoStartMs,
+    chapterBeatStarts,
     speechEstimateMs,
     FIRST_LINE_AT,
     timelineAt,
   } = filmModel
   assert.equal(CHAPTERS.length, 6)
-  assert.ok(TOTAL_SECONDS >= 180 && TOTAL_SECONDS <= 190, `runtime ${TOTAL_SECONDS}s is outside 180 to 190`)
+  assert.ok(
+    TOTAL_SECONDS >= 190 && TOTAL_SECONDS <= 200,
+    `runtime ${TOTAL_SECONDS}s is outside 190 to 200`
+  )
 
   assert.equal(INTRO_TITLE, 'A forecasting record you can audit')
-  const introWords = INTRO_LINE.trim().split(/\s+/).length
-  assert.ok(introWords >= 25 && introWords <= 32, `intro has ${introWords} words`)
-  assert.doesNotMatch(INTRO_LINE, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+  assert.equal(INTRO_LINES.length, 2)
+  for (const [index, line] of INTRO_LINES.entries()) {
+    const words = line.trim().split(/\s+/).length
+    assert.ok(
+      words >= 20 && words <= 32,
+      `intro beat ${index + 1} has ${words} spoken words`
+    )
+    const sentences = (line.match(/[.!?](\s|$)/g) ?? []).length
+    assert.ok(
+      sentences >= 1 && sentences <= 3,
+      `intro beat ${index + 1} has ${sentences} sentences`
+    )
+    assert.doesNotMatch(
+      line.replace(/x402/gi, ''),
+      /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i
+    )
+  }
   assert.ok(INTRO_MS >= 7000)
-  assert.ok(INTRO_MS >= speechEstimateMs(INTRO_LINE) + 500, 'the intro must fit its spoken line')
-  assert.ok(INTRO_INTEGRATIONS_MS >= 4000, 'the integration set needs time to land and hold')
+  assert.ok(
+    INTRO_MS >= INTRO_SECOND_BEAT_AT + speechEstimateMs(INTRO_LINES[1]) + 500,
+    'the intro must fit both spoken beats'
+  )
+  assert.ok(
+    INTRO_MS - (INTRO_SECOND_BEAT_AT + speechEstimateMs(INTRO_LINES[1])) <= 1100,
+    'the intro must not leave more than about a second of tail'
+  )
   assert.equal(CHAPTER_STARTS[0], INTRO_MS)
   assert.equal(timelineAt(0).intro, true)
+  assert.equal(timelineAt(0).introBeat, 1)
+  assert.equal(timelineAt(INTRO_SECOND_BEAT_AT).introBeat, 2)
   assert.equal(timelineAt(INTRO_MS).intro, false)
   assert.equal(timelineAt(INTRO_MS).index, 0)
 
   let total = INTRO_MS
-  for (const chapter of CHAPTERS) {
-    assert.equal(chapter.lines.length, 2, `${chapter.id} needs two beats`)
+  const beatCounts = []
+  for (const [chapterIndex, chapter] of CHAPTERS.entries()) {
+    const lines = chapter.lines
+    assert.ok(lines.length >= 2 && lines.length <= 4, `${chapter.id} has ${lines.length} beats`)
+    beatCounts.push(lines.length)
 
-    for (const [index, line] of chapter.lines.entries()) {
-      const words = line.trim().split(/\s+/).length
+    const starts = chapterBeatStarts(chapter)
+    assert.equal(starts.length, lines.length, `${chapter.id} beat count does not match its starts`)
+    assert.equal(starts[0], FIRST_LINE_AT)
+
+    // The two original beats are the long ones. When short beats were added,
+    // they sit at index 1 and, for the agent chapter, index 3.
+    const primary = lines.length === 2 ? [0, 1] : [0, 2]
+    const short = lines.map((_, index) => index).filter((index) => !primary.includes(index))
+    for (const index of primary) {
+      const words = lines[index].trim().split(/\s+/).length
       assert.ok(
         words >= 20 && words <= 30,
         `${chapter.id} beat ${index + 1} has ${words} spoken words`
       )
-      const sentences = (line.match(/[.!?](\s|$)/g) ?? []).length
+      const sentences = (lines[index].match(/[.!?](\s|$)/g) ?? []).length
       assert.ok(
         sentences >= 1 && sentences <= 3,
         `${chapter.id} beat ${index + 1} has ${sentences} sentences`
       )
-
-      // No identifier or long number is spoken. These belong in the visible
-      // text, where a reader can copy them.
-      assert.doesNotMatch(line, /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i)
+    }
+    for (const index of short) {
+      const words = lines[index].trim().split(/\s+/).length
+      assert.ok(
+        words >= 5 && words <= 15,
+        `${chapter.id} short beat ${index + 1} has ${words} spoken words`
+      )
+      const sentences = (lines[index].match(/[.!?](\s|$)/g) ?? []).length
+      assert.ok(
+        sentences >= 1 && sentences <= 2,
+        `${chapter.id} short beat ${index + 1} has ${sentences} sentences`
+      )
     }
 
-    const duration = chapterDurationMs(chapter)
-    const beatTwo = beatTwoStartMs(chapter)
-    assert.ok(
-      FIRST_LINE_AT + speechEstimateMs(chapter.lines[0]) + 500 <= beatTwo,
-      `${chapter.id} first line runs into the second beat`
-    )
-    assert.ok(
-      beatTwo + speechEstimateMs(chapter.lines[1]) + 500 <= duration,
-      `${chapter.id} second line runs past the chapter`
-    )
-    total += duration
+    for (const [index, line] of lines.entries()) {
+      // No identifier or long number is spoken. These belong in the visible
+      // text, where a reader can copy them.
+      assert.doesNotMatch(
+        line.replace(/x402/gi, ''),
+        /\d{3,}|0x[0-9a-f]|9N5s961|6addae|a1ec7f|::/i
+      )
+
+      const end = starts[index] + speechEstimateMs(line)
+      if (index + 1 < lines.length) {
+        assert.ok(
+          starts[index + 1] >= end,
+          `${chapter.id} beat ${index + 1} runs into beat ${index + 2}`
+        )
+        assert.ok(
+          starts[index + 1] - end <= 3000,
+          `${chapter.id} leaves more than 3s before beat ${index + 2}`
+        )
+      } else {
+        assert.ok(
+          chapterDurationMs(chapter) - end <= 3000,
+          `${chapter.id} leaves more than 3s after its last beat`
+        )
+      }
+    }
+
+    // The frame clock reports the beat that owns the current local time.
+    const chapterStart = CHAPTER_STARTS[chapterIndex]
+    for (const [index, start] of starts.entries()) {
+      if (index === 0) continue
+      assert.equal(
+        timelineAt(chapterStart + start + 1).beat,
+        index + 1,
+        `${chapter.id} beat ${index + 1} is not reached on the clock`
+      )
+    }
+
+    total += chapterDurationMs(chapter)
   }
+  assert.deepEqual(beatCounts, [2, 2, 3, 2, 4, 3])
   assert.equal(Math.round(total / 1000), TOTAL_SECONDS)
 })
 
 test('the intro names all four integrations with their marks', () => {
-  const { INTRO_INTEGRATIONS_MS, INTRO_MS, speechEstimateMs, INTRO_LINE } = filmModel
-  assert.ok(INTRO_INTEGRATIONS_MS >= 4000)
-  assert.ok(INTRO_MS >= speechEstimateMs(INTRO_LINE) + 500 + INTRO_INTEGRATIONS_MS)
+  const { INTRO_LINES, INTRO_MS, INTRO_SECOND_BEAT_AT, speechEstimateMs } = filmModel
+  assert.equal(INTRO_LINES.length, 2)
+  assert.ok(INTRO_SECOND_BEAT_AT >= speechEstimateMs(INTRO_LINES[0]))
+  assert.ok(INTRO_MS >= INTRO_SECOND_BEAT_AT + speechEstimateMs(INTRO_LINES[1]))
 
   const cover = sources['FilmCover.tsx']
   const film = sources['Film.tsx']
@@ -246,9 +319,10 @@ test('the intro names all four integrations with their marks', () => {
   assert.match(cover, /BrandImage brand="tatum"[\s\S]*?alt="Tatum prediction markets"/)
   assert.match(cover, /BrandImage brand="sui"[\s\S]*?alt="Sui"/)
   assert.match(cover, /<X402Wordmark/)
+  assert.match(cover, /integrationsAt: number/)
   assert.match(cover, /localMs: number/)
   assert.match(cover, /staticMode: boolean/)
-  assert.match(film, /<IntroCard localMs=\{frame\.localMs\} staticMode=\{staticMode\} \/>/)
+  assert.match(film, /integrationsAt=\{INTRO_SECOND_BEAT_AT\}/)
 })
 
 test('the cover holds for two and a half seconds', () => {
@@ -328,7 +402,7 @@ test('the captions mirror the narration and can be turned off', () => {
   assert.match(film, /h-\[4\.5rem\]/)
   assert.match(film, /text-\[10px\] leading-\[14px\]/)
   assert.match(film, /captionText/)
-  assert.match(film, /frame\.intro\s*\?\s*INTRO_LINE/)
+  assert.match(film, /frame\.intro\s*\?\s*INTRO_LINES\[frame\.introBeat - 1\]/)
   assert.match(film, /frame\.chapter\.coverTitle/)
   assert.match(film, /frame\.chapter\.coverLine/)
   assert.match(film, /frame\.chapter\.lines\[frame\.beat - 1\]/)
@@ -375,7 +449,7 @@ test('the voiceover follows the browser speech brief', () => {
   assert.ok((film.match(/NARRATION_UNAVAILABLE/g) ?? []).length >= 3, 'the line must render in the panel in both modes')
 
   assert.match(film, /narrator\.speak\(spokenLine\)/)
-  assert.match(film, /frame\.beat === 2/)
+  assert.match(film, /frame\.beat > 0/)
   assert.match(film, /frame\.chapter\.coverTitle/)
   assert.match(film, /frame\.chapter\.coverLine/)
   assert.match(film, /narrator\.cancel\(\)/)

@@ -433,32 +433,36 @@ function CoverExhibit({ index }: { index: number }) {
 export function IntroCard({
   localMs,
   staticMode,
+  integrationsAt,
 }: {
   localMs: number
   staticMode: boolean
+  integrationsAt: number
 }) {
   // Four integrations, each with its own mark. The labels are two or three
-  // words at most; the spoken intro stays one line and is carried in the
-  // captions, not read out as a list. A paused frame shows the whole set.
-  const at = (start: number) => (staticMode ? 1 : easeOut(span(localMs, start, start + 380)))
+  // words at most; the second spoken beat describes them in prose rather than
+  // reading the labels back. Cards enter as that beat starts and stay on
+  // screen, and a paused frame shows the whole set.
+  const at = (offset: number) =>
+    staticMode ? 1 : easeOut(span(localMs, integrationsAt + offset, integrationsAt + offset + 380))
   const integrations = [
     {
       key: 'memory',
       label: 'Memory',
       mark: <BrandImage brand="walrus" height={28} alt="Walrus" />,
-      start: 500,
+      start: 0,
     },
     {
       key: 'chain-data',
       label: 'Chain data',
       mark: <BrandImage brand="tatum" height={24} alt="Tatum" />,
-      start: 920,
+      start: 420,
     },
     {
       key: 'markets',
       label: 'Markets',
       mark: <BrandImage brand="tatum" height={24} alt="Tatum prediction markets" />,
-      start: 1340,
+      start: 840,
     },
     {
       key: 'agent-payments',
@@ -469,7 +473,7 @@ export function IntroCard({
           <X402Wordmark className="text-base leading-none" />
         </span>
       ),
-      start: 1760,
+      start: 1260,
     },
   ]
 
