@@ -12,7 +12,7 @@ export function TatumSection() {
           index="04"
           label="Tatum"
           title="Tatum builds the app. Verification still has a gap."
-          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client for REST and JSON-RPC work, and reads every market through Tatum's prediction markets endpoints. Sui is the exception: Tatum has no Sui JSON-RPC host, so payment verification calls Sui GraphQL today."
+          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client, and reads every market through Tatum's prediction markets endpoints. Sui is reached over gRPC rather than JSON-RPC, so payment verification reads Sui GraphQL directly today."
         />
 
         <div className="mt-4xl grid gap-xl lg:grid-cols-3">
@@ -35,8 +35,8 @@ export function TatumSection() {
           <TatumCard
             icon={<WarningCircle size={16} weight="bold" aria-hidden="true" />}
             label="Gap"
-            title="No Sui JSON-RPC host"
-            body="Verification uses the public Sui GraphQL endpoint. The TODO is explicit: move to Tatum Sui gRPC when the host exists."
+            title="Verification still reads Sui directly"
+            body="Tatum exposes Sui over gRPC, not JSON-RPC. Verification reads the public Sui GraphQL endpoint today; moving it to Tatum's gRPC gateway is the remaining work, and the TODO names it."
             href={LINKS.verifySource}
             linkLabel="Read the TODO"
             tone="accent"
