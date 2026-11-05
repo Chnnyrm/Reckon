@@ -122,8 +122,9 @@ export function PaymentsSection() {
                 <p className="text-xs font-medium text-primary">One digest buys one call</p>
                 <p className="mt-xs text-xs leading-5 text-quaternary">
                   The mppx charge handler uses a digest store, and the route's fallback verifies a
-                  supplied digest through Sui GraphQL. The store is in memory per running
-                  instance, so replay protection is scoped to that instance.
+                  supplied digest through Tatum's Sui gRPC gateway, with public Sui GraphQL as the
+                  named fallback. The store is in memory per running instance, so replay protection
+                  is scoped to that instance.
                 </p>
               </div>
             </div>

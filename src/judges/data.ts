@@ -242,9 +242,9 @@ export const LIMITS: Limit[] = [
     linkLabel: 'Open the Tatum API docs',
   },
   {
-    title: 'Tatum does not host Sui JSON-RPC',
+    title: 'Verification falls back to a public endpoint',
     body:
-      'Tatum AI Builder built the app, but there is no Tatum Sui JSON-RPC host. Payment verification calls Sui GraphQL today. The code carries a TODO to move to Tatum Sui gRPC.',
+      "A payment digest is checked through Tatum's Sui gRPC gateway first. If Tatum cannot answer, the same check runs against public Sui GraphQL and the response names the source. Neither path is a full node we run, and a payment neither path can check is reported as unverified, not invalid.",
     href: LINKS.verifySource,
     linkLabel: 'Read the verification source',
   },

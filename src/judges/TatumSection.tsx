@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Code, Plugs, WarningCircle } from '@phosphor-icons/react'
+import { ArrowRight, Code, Plugs, ShieldCheck } from '@phosphor-icons/react'
 import { LINKS, TATUM_ID } from './data'
 import { Container, ExternalLink, SectionHead } from './ui'
 
@@ -11,8 +11,8 @@ export function TatumSection() {
           id="tatum-title"
           index="04"
           label="Tatum"
-          title="Tatum builds the app. Verification still has a gap."
-          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server also carries a Tatum API client, and reads every market through Tatum's prediction markets endpoints. Sui is reached over gRPC rather than JSON-RPC, so payment verification reads Sui GraphQL directly today."
+          title="Tatum builds the app and verifies the chain."
+          lede="Tatum AI Builder is the build environment, not a decoration on the page. The server carries a Tatum API client, reads every market through Tatum's prediction markets endpoints, and checks Sui payment digests through Tatum's Sui gRPC gateway. If the gateway cannot answer, verification falls back to public Sui GraphQL, and the result names the path that answered."
         />
 
         <div className="mt-4xl grid gap-xl lg:grid-cols-3">
@@ -28,18 +28,17 @@ export function TatumSection() {
             icon={<Plugs size={16} weight="bold" aria-hidden="true" />}
             label="Server"
             title="Tatum API client"
-            body="The server routes through a Tatum-aware client. The key stays server-side. Market lists and position grading call Tatum's prediction markets endpoints; the Sui verification path below is the exception."
+            body="The server routes through a Tatum-aware client. The key stays server-side. Market lists, position grading and Sui digest verification all use it; no route sends the key to the browser."
             href={LINKS.tatumClientSource}
             linkLabel="Read the client"
           />
           <TatumCard
-            icon={<WarningCircle size={16} weight="bold" aria-hidden="true" />}
-            label="Gap"
-            title="Verification still reads Sui directly"
-            body="Tatum exposes Sui over gRPC, not JSON-RPC. Verification reads the public Sui GraphQL endpoint today; moving it to Tatum's gRPC gateway is the remaining work, and the TODO names it."
+            icon={<ShieldCheck size={16} weight="bold" aria-hidden="true" />}
+            label="Verify"
+            title="Sui verification over gRPC"
+            body="Tatum's Sui gateway answers native gRPC over HTTP/2 and takes the key as x-api-key metadata. One call reads a digest's status and sender with an 8 second deadline, so a stalled gateway falls back instead of hanging the request."
             href={LINKS.verifySource}
-            linkLabel="Read the TODO"
-            tone="accent"
+            linkLabel="Read the verification source"
           />
         </div>
 
@@ -48,47 +47,54 @@ export function TatumSection() {
             <div className="flex flex-wrap items-center justify-between gap-md">
               <p className="text-xs font-medium text-quaternary">Verification path</p>
               <span className="rounded-full border border-reckon-accent/40 px-md py-xs text-xs font-medium text-reckon-accent">
-                Honest gap
+                Tatum first
               </span>
             </div>
 
             <div className="mt-2xl grid items-stretch gap-md sm:grid-cols-[1fr_auto_1fr]">
               <div className="rounded-xl border border-primary bg-tertiary p-lg">
-                <p className="text-xs text-quaternary">Today</p>
-                <p className="mt-xs text-sm font-semibold text-primary">Sui GraphQL</p>
+                <p className="text-xs text-quaternary">Primary</p>
+                <p className="mt-xs text-sm font-semibold text-primary">Tatum Sui gRPC</p>
                 <p className="mt-sm break-all font-mono text-xs leading-5 text-secondary">
-                  graphql.mainnet.sui.io
+                  sui-mainnet-grpc.gateway.tatum.io
                 </p>
                 <p className="mt-md text-xs leading-5 text-quaternary">
-                  Used by the verify helper and the oracle fallback.
+                  Asked first, with the Tatum key in x-api-key metadata and a read mask for status and
+                  sender only.
                 </p>
               </div>
               <div className="flex items-center justify-center text-quaternary">
                 <ArrowRight size={16} weight="bold" className="rotate-90 sm:rotate-0" aria-hidden="true" />
               </div>
               <div className="rounded-xl border border-dashed border-primary bg-primary p-lg">
-                <p className="text-xs text-quaternary">TODO</p>
-                <p className="mt-xs text-sm font-semibold text-secondary">Tatum Sui gRPC</p>
+                <p className="text-xs text-quaternary">Fallback</p>
+                <p className="mt-xs text-sm font-semibold text-secondary">Sui GraphQL</p>
                 <p className="mt-sm break-all font-mono text-xs leading-5 text-quaternary">
-                  sui-mainnet-grpc.gateway.tatum.io
+                  graphql.mainnet.sui.io
                 </p>
                 <p className="mt-md text-xs leading-5 text-quaternary">
-                  Not available today. The code names the target without pretending it is live.
+                  Asked only when Tatum cannot answer: bad key, timeout or outage. The reply carries a
+                  source field naming the path that answered.
                 </p>
               </div>
             </div>
 
             <div className="mt-xl rounded-lg border border-primary bg-primary p-lg">
-              <p className="text-xs font-medium text-quaternary">The comment in the source</p>
+              <p className="text-xs font-medium text-quaternary">The call in the source</p>
               <pre className="judges-code mt-sm whitespace-pre-wrap font-mono text-xs leading-5 text-secondary">
-{`// TODO: route this through Tatum Sui gRPC at
-// sui-mainnet-grpc.gateway.tatum.io`}
+{`const transport = new GrpcTransport({
+  host: 'sui-mainnet-grpc.gateway.tatum.io:443',
+  meta: { 'x-api-key': key },
+})`}
               </pre>
             </div>
 
             <div className="mt-xl flex flex-wrap gap-x-xl gap-y-md">
               <ExternalLink href={LINKS.verifySource} className="text-sm">
                 Verification source
+              </ExternalLink>
+              <ExternalLink href={LINKS.tatumClientSource} className="text-sm">
+                Tatum gRPC client
               </ExternalLink>
               <ExternalLink href={LINKS.tatum} className="text-sm">
                 Tatum
@@ -100,22 +106,23 @@ export function TatumSection() {
           </div>
 
           <div className="rounded-2xl border border-primary bg-secondary p-xl sm:p-2xl">
-            <p className="text-xs font-medium text-quaternary">What we do not claim</p>
+            <p className="text-xs font-medium text-quaternary">What the fallback means</p>
             <h3 className="mt-sm text-lg font-semibold text-primary">
-              Tatum is not verifying Sui transactions yet.
+              A fallback is named, not hidden.
             </h3>
             <p className="mt-md text-sm leading-6 text-secondary">
-              The earlier commit message says "verify Sui transactions through Tatum". The code
-              does not support that reading today, so this page does not repeat it. The build is
-              Tatum's; the current verification call is Sui's public GraphQL API.
+              Tatum's gateway and the public Sui endpoint read the same chain. When Tatum answers,
+              the response says so. When it does not, the check runs against public Sui GraphQL and
+              the response says that instead. If neither answers, the endpoint reports that
+              verification could not be performed, not that the payment was invalid.
             </p>
             <div className="mt-xl rounded-lg border border-primary bg-tertiary p-lg">
               <p className="text-xs text-quaternary">Build ID</p>
               <p className="mt-xs break-all font-mono text-sm text-primary">{TATUM_ID}</p>
             </div>
             <p className="mt-md text-xs leading-5 text-quaternary">
-              This is the kind of gap the verification strip is for: name it, link it, and let a
-              reader decide what it is worth.
+              The verification strip links every claim on this page. This section links the code
+              that decides whether a digest counts, so a reader can check the ordering themselves.
             </p>
             <div className="mt-lg">
               <ExternalLink href={LINKS.repoMirror} className="text-sm">
