@@ -128,8 +128,14 @@ export function mapTatumTransaction(response, digest) {
     throw new TatumSuiError(`Tatum Sui gRPC request failed (${reason})`, 'NOT_FOUND', reason)
   }
   const status = transaction.effects?.status
-  const success = status?.success === true
-  const description = status?.error?.description
+  // No status is not a failed transaction: it is a response this client cannot
+  // read, so the caller falls back instead of blaming the payment.
+  if (!status) {
+    const reason = 'MALFORMED: Tatum returned no effects.status'
+    throw new TatumSuiError(`Tatum Sui gRPC request failed (${reason})`, 'MALFORMED', reason)
+  }
+  const success = status.success === true
+  const description = status.error?.description
   return {
     digest: transaction.digest || digest,
     sender: transaction.transaction?.sender ?? null,

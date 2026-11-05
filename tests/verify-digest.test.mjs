@@ -105,14 +105,22 @@ test('a failed transaction returns ok false with the sender, through Tatum', asy
   assert.match(result.reason, /^Transaction failed on chain: MoveAbort/)
 })
 
-test('a transaction missing the effects it asked for is not reported as success', () => {
-  // A read mask that the gateway ignores must not turn into a pass.
-  const mapped = mapTatumTransaction(
-    { transaction: { digest: SUCCESS_DIGEST, transaction: { sender: SENDER } } },
-    SUCCESS_DIGEST
+test('a response without effects.status is unverifiable, not failed', () => {
+  // A read mask the gateway ignored must not turn into a pass, and it must not
+  // turn into a rejected payment either: verification has to fall back.
+  assert.throws(
+    () =>
+      mapTatumTransaction(
+        { transaction: { digest: SUCCESS_DIGEST, transaction: { sender: SENDER } } },
+        SUCCESS_DIGEST
+      ),
+    (err) => {
+      assert.equal(err.name, 'TatumSuiError')
+      assert.equal(err.code, 'MALFORMED')
+      assert.match(err.message, /MALFORMED/)
+      return true
+    }
   )
-  assert.equal(mapped.success, false)
-  assert.equal(mapped.sender, SENDER)
 })
 
 test('a Tatum failure falls back to Sui GraphQL and says so', async () => {
