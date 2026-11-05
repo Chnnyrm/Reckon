@@ -13,13 +13,15 @@ import { useReducedMotion } from './ui'
 import {
   CHAPTERS,
   CHAPTER_STARTS,
+  COVER_FADE_MS,
+  FIRST_LINE_AT,
   INTRO_LINES,
   INTRO_MS,
-  INTRO_SECOND_BEAT_AT,
   INTRO_TITLE,
   TOTAL_MS,
   TOTAL_SECONDS,
   chapterDurationMs,
+  coverOpacityAt,
   formatClock,
   timelineAt,
 } from './film'
@@ -186,6 +188,13 @@ export default function Film() {
       : frame.chapter.lines[frame.beat - 1]
   const captionText = captionTitle ? `${captionTitle}. ${captionLine}` : captionLine
 
+  // The intro card fades out with the same smoothstep the chapter covers use,
+  // over the last COVER_FADE_MS of the intro. The chapter 1 cover is mounted
+  // behind it for that window, so the two frames cross rather than snap.
+  const introFadeOpacity = frame.intro
+    ? coverOpacityAt(frame.localMs - (INTRO_MS - COVER_FADE_MS) + FIRST_LINE_AT)
+    : 1
+
   const label = staticMode
     ? 'Static'
     : playing
@@ -242,22 +251,44 @@ export default function Film() {
                 <div className="relative w-full">
                   <div className="relative h-[30rem] w-full sm:h-[32rem]">
                     {frame.intro ? (
-                      <IntroCard
-                        localMs={frame.localMs}
-                        staticMode={staticMode}
-                        integrationsAt={INTRO_SECOND_BEAT_AT}
-                      />
+                      <>
+                        {frame.localMs >= INTRO_MS - COVER_FADE_MS ? (
+                          <>
+                            <div className="absolute inset-0 z-10">
+                              <ChapterScene index={0} progress={0} />
+                            </div>
+                            <CoverCard
+                              chapter={CHAPTERS[0]}
+                              index={0}
+                              localMs={0}
+                              staticMode={false}
+                              held
+                            />
+                          </>
+                        ) : null}
+                        <IntroCard
+                          localMs={frame.localMs}
+                          staticMode={staticMode}
+                          fadeOpacity={introFadeOpacity}
+                        />
+                      </>
                     ) : (
                       <>
                         <div className="absolute inset-0 z-10">
                           <ChapterScene index={frame.index} progress={staticMode ? 1 : frame.scene} />
                         </div>
+                        {/* Chapter 1 keeps its cover content fully visible for
+                            the intro's 350ms fade, so the cross has no blank
+                            frame between the two cards. */}
                         <CoverCard
                           chapter={frame.chapter}
                           index={frame.index}
                           localMs={frame.localMs}
                           staticMode={staticMode}
-                          held={!playing && frame.beat === 0}
+                          held={
+                            (!playing && frame.beat === 0) ||
+                            (frame.index === 0 && frame.localMs < COVER_FADE_MS)
+                          }
                         />
                       </>
                     )}

@@ -319,10 +319,14 @@ test('the intro names all four integrations with their marks', () => {
   assert.match(cover, /BrandImage brand="tatum"[\s\S]*?alt="Tatum prediction markets"/)
   assert.match(cover, /BrandImage brand="sui"[\s\S]*?alt="Sui"/)
   assert.match(cover, /<X402Wordmark/)
-  assert.match(cover, /integrationsAt: number/)
+  assert.match(cover, /fadeOpacity\?: number/)
+  assert.match(cover, /CARD_START_MS = 300/)
+  assert.match(cover, /CARD_STAGGER_MS = 380/)
   assert.match(cover, /localMs: number/)
   assert.match(cover, /staticMode: boolean/)
-  assert.match(film, /integrationsAt=\{INTRO_SECOND_BEAT_AT\}/)
+  assert.match(film, /fadeOpacity=\{introFadeOpacity\}/)
+  assert.match(film, /INTRO_MS - COVER_FADE_MS/)
+  assert.match(film, /coverOpacityAt/)
 })
 
 test('the cover holds for two and a half seconds', () => {

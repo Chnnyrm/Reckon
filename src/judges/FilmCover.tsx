@@ -433,18 +433,21 @@ function CoverExhibit({ index }: { index: number }) {
 export function IntroCard({
   localMs,
   staticMode,
-  integrationsAt,
+  fadeOpacity = 1,
 }: {
   localMs: number
   staticMode: boolean
-  integrationsAt: number
+  fadeOpacity?: number
 }) {
-  // Four integrations, each with its own mark. The labels are two or three
-  // words at most; the second spoken beat describes them in prose rather than
-  // reading the labels back. Cards enter as that beat starts and stay on
-  // screen, and a paused frame shows the whole set.
+  // Four integrations, each with its own mark. The cards enter from the start
+  // of the intro, before the spoken beats name them, and stay for the whole
+  // card. The second beat explains them in prose rather than reading labels.
+  const CARD_START_MS = 300
+  const CARD_STAGGER_MS = 380
   const at = (offset: number) =>
-    staticMode ? 1 : easeOut(span(localMs, integrationsAt + offset, integrationsAt + offset + 380))
+    staticMode
+      ? 1
+      : easeOut(span(localMs, CARD_START_MS + offset, CARD_START_MS + offset + CARD_STAGGER_MS))
   const integrations = [
     {
       key: 'memory',
@@ -456,13 +459,13 @@ export function IntroCard({
       key: 'chain-data',
       label: 'Chain data',
       mark: <BrandImage brand="tatum" height={24} alt="Tatum" />,
-      start: 420,
+      start: 380,
     },
     {
       key: 'markets',
       label: 'Markets',
       mark: <BrandImage brand="tatum" height={24} alt="Tatum prediction markets" />,
-      start: 840,
+      start: 760,
     },
     {
       key: 'agent-payments',
@@ -473,7 +476,7 @@ export function IntroCard({
           <X402Wordmark className="text-base leading-none" />
         </span>
       ),
-      start: 1260,
+      start: 1140,
     },
   ]
 
@@ -481,7 +484,7 @@ export function IntroCard({
     <div
       aria-hidden="true"
       className="absolute inset-0 z-20 flex flex-col justify-center gap-lg overflow-hidden bg-primary p-lg sm:p-2xl"
-      style={{ perspective: '1200px' }}
+      style={{ perspective: '1200px', opacity: fadeOpacity }}
     >
       {/* Morphing Background Optics for Intro */}
       <div
