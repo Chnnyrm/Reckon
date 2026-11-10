@@ -17,7 +17,7 @@ export function Limits() {
           index="07"
           label="Limits"
           title="What this does not do."
-          lede="The edges matter more than the pitch. These are the places where the product is narrower than the page could make it sound."
+          lede="Six boundaries. Each one is a real constraint on what this is ready for, stated here so that nothing above has to be taken on trust."
         />
 
         <ol className="mt-4xl divide-y divide-primary border-y border-primary">
@@ -51,11 +51,11 @@ export function Limits() {
 
         <div className="mt-4xl grid gap-xl rounded-2xl border border-primary bg-secondary p-xl sm:p-2xl lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-xs font-medium text-reckon-accent">The shortest honest version</p>
+            <p className="text-xs font-medium text-reckon-accent">In short</p>
             <p className="mt-sm max-w-2xl text-lg font-semibold text-primary">
-              The record is real, and it is graded from live prices. Markets, grading and payment
-              verification all run through Tatum. The payment rail is a testnet draft, and
-              that is the one part of this that is not production grade.
+              Positions are real and graded from live prices. Markets, grading and payment
+              verification run through Tatum. The payment rail is a testnet draft, and it is
+              labelled as one everywhere it appears.
             </p>
             <div className="mt-lg flex flex-wrap gap-x-xl gap-y-md">
               <ExternalLink href={LINKS.deployNotes} className="text-sm">

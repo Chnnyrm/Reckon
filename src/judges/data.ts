@@ -191,13 +191,13 @@ export const EVIDENCE: Evidence[] = [
     claim: 'Recall was measured',
     value: '3.8s cold, 1.0-1.2s warm',
     href: LINKS.deployNotes,
-    linkLabel: 'Read the deploy notes',
+    linkLabel: 'Read the deployment notes',
   },
   {
     claim: 'The write commits in about 12s',
     value: 'job accepted, then blob',
     href: LINKS.deployNotes,
-    linkLabel: 'Read the commit evidence',
+    linkLabel: 'Read the commit history',
   },
   {
     claim: 'x402 runs on Sui testnet',
@@ -253,7 +253,7 @@ export const LIMITS: Limit[] = [
     body:
       'A recall that never answers is cut off at 15 seconds and the record falls back to the cache. When that happens the app shows a notice instead of claiming Walrus answered.',
     href: LINKS.cacheCommit,
-    linkLabel: 'Read the cache-notice commit',
+    linkLabel: 'See the fallback in the code',
   },
   {
     title: 'The blob link opens sealed bytes',
