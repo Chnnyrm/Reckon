@@ -53,8 +53,9 @@ export function Limits() {
           <div>
             <p className="text-xs font-medium text-reckon-accent">The shortest honest version</p>
             <p className="mt-sm max-w-2xl text-lg font-semibold text-primary">
-              The record is real. The payment rail is a testnet draft. The build is Tatum's. The
-              verification gap is in the code, not hidden behind the page.
+              The record is real, and it is graded from live prices. Markets, grading and payment
+              verification all run through Tatum. The payment rail is a testnet draft, and
+              that is the one part of this that is not production grade.
             </p>
             <div className="mt-lg flex flex-wrap gap-x-xl gap-y-md">
               <ExternalLink href={LINKS.deployNotes} className="text-sm">
